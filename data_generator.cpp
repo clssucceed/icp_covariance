@@ -1,4 +1,4 @@
-#include "data_generation.h"
+#include "data_generator.h"
 
 #include "color.h"
 #include "utils.h"

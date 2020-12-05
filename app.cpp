@@ -1,5 +1,6 @@
-#include "icp_covariance.h"
-
+#include "data_generator.h"
+#include "visualization.h"
+#include "color.h"
 #include <iostream>
 
 int main(int argc, char *argv[]) {

@@ -6,8 +6,8 @@ find_package(OpenCV)
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 message("${OpenCV_INCLUDE_DIRS}")
 add_executable(icp_covariance 
-  icp_covariance.cpp 
-  data_generation.cpp 
+  app.cpp 
+  data_generator.cpp 
   utils.cpp 
   visualization.cpp)
 
