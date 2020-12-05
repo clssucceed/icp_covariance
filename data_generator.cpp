@@ -19,37 +19,37 @@ void DataGenerator::Generate() {
   // TODO(clssucceed@gmail.com): pose1和world系不重合
 
   // step 1: set ego pose
-  Eigen::Affine3d ego_pose1 = icp_cov::utils::RtToAffine3d(
-      Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
-  Eigen::Affine3d ego_pose2 = icp_cov::utils::RtToAffine3d(
-      Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero());
+  ego_pose1_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
+                                            Eigen::Vector3d::Zero());
+  ego_pose2_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
+                                            Eigen::Vector3d::Zero());
 
   // step 2: set target pose
-  Eigen::Affine3d target_pose1 = icp_cov::utils::RtToAffine3d(
-      Eigen::Matrix3d::Identity(), Eigen::Vector3d(10, 5, 0));
-  Eigen::Affine3d target_pose2 = icp_cov::utils::RtToAffine3d(
-      Eigen::Matrix3d::Identity(), Eigen::Vector3d(11, 5, 0));
+  target_pose1_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
+                                               Eigen::Vector3d(10, 5, 0));
+  target_pose2_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
+                                               Eigen::Vector3d(11, 5, 0));
 
   // step 3: generate points
   const Eigen::Vector3d target_size(4, 2, 0);
   const double angle_resolution = 0.2;  // unit: degree
   const bool output_points_in_world_frame = true;
-  GeneratePoints(ego_pose1, target_pose1, target_size, angle_resolution,
+  GeneratePoints(ego_pose1_, target_pose1_, target_size, angle_resolution,
                  pcl1_in_ego_frame_, pcl1_in_world_frame_);
-  GeneratePoints(ego_pose2, target_pose2, target_size, angle_resolution,
+  GeneratePoints(ego_pose2_, target_pose2_, target_size, angle_resolution,
                  pcl2_in_ego_frame_, pcl2_in_world_frame_);
 
   // step 4: generate init pose
-  icp_transform_ = target_pose2 * target_pose1.inverse();
+  icp_transform_ = target_pose2_ * target_pose1_.inverse();
 
   // step 5: Add noise
-  AddNoiseToPoints(pcl1_in_ego_frame_, ego_pose1, pcl1_in_ego_frame_with_noise_,
+  AddNoiseToPoints(pcl1_in_ego_frame_, ego_pose1_, pcl1_in_ego_frame_with_noise_,
                    pcl1_in_world_frame_with_noise_);
-  AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2, pcl2_in_ego_frame_with_noise_,
+  AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2_, pcl2_in_ego_frame_with_noise_,
                    pcl2_in_world_frame_with_noise_);
   AddNoiseToIcpTransform();
 
-  // step 5: visualization
+  // step 6: visualization
   //   icp_cov::Visualization::Instance()->DrawPoints(pcl1_in_ego_frame_,
   //   kColorRed);
   //   icp_cov::Visualization::Instance()->DrawPoints(pcl2_in_ego_frame_,

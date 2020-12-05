@@ -13,12 +13,25 @@ PclAlignment* PclAlignment::Instance() {
 }
 
 void PclAlignment::EigenPclToPcl(const EigenPointCloud& eigen_pcl,
-                                 PointCloudT::Ptr pcl) {
+                                 PointCloudT::Ptr& pcl) {
   pcl.reset(new PointCloudT);
+  assert(pcl);
   for (const auto& eigen_point : eigen_pcl) {
     pcl->points.push_back(PointT{static_cast<float>(eigen_point(0)),
                                  static_cast<float>(eigen_point(1)),
                                  static_cast<float>(eigen_point(2))});
+  }
+}
+
+void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
+                                 EigenPointCloud& eigen_pcl) {
+  assert(pcl);
+  eigen_pcl.clear();
+  eigen_pcl.reserve(pcl->size());
+  for (const auto& point : pcl->points) {
+    eigen_pcl.emplace_back(EigenPoint{static_cast<double>(point.x),
+                                      static_cast<double>(point.y),
+                                      static_cast<double>(point.z)});
   }
 }
 
@@ -32,6 +45,7 @@ void PclAlignment::Align() {
   icp.setInputTarget(pcl2_);
   icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
   assert(icp.hasConverged());
+  PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
   icp_transform_est_ = icp.getFinalTransformation().cast<double>();
   icp_fitness_score_ = icp.getFitnessScore();
 }

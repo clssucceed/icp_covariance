@@ -1,5 +1,5 @@
-#include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 #include <Eigen/Dense>
 #include <vector>
@@ -32,7 +32,9 @@ class PclAlignment {
   Eigen::Affine3d icp_transform_est() const { return icp_transform_est_; }
   double icp_fitness_score() const { return icp_fitness_score_; }
   const EigenPointCloud& eigen_pcl1() const { return eigen_pcl1_; }
-  const EigenPointCloud& eigen_pcl1_aligned() const { return eigen_pcl1_aligned_; }
+  const EigenPointCloud& eigen_pcl1_aligned() const {
+    return eigen_pcl1_aligned_;
+  }
   const EigenPointCloud& eigen_pcl2() const { return eigen_pcl2_; }
   void Align();
 
@@ -41,7 +43,8 @@ class PclAlignment {
   PclAlignment() { pcl1_aligned_.reset(new PointCloudT); };
 
  private:
-  void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr pcl);
+  void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
+  void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
 
  private:
   EigenPointCloud eigen_pcl1_;
