@@ -1,15 +1,21 @@
 #include "data_generation.h"
 
+#include "color.h"
 #include "utils.h"
 #include "visualization.h"
-#include "color.h"
 
 namespace icp_cov {
-namespace data_gen {
 
-void DataGeneration(std::vector<Eigen::Vector3d>& pcl1,
-                    std::vector<Eigen::Vector3d>& pcl2,
-                    Eigen::Affine3d& init_pose) {
+DataGenerator* DataGenerator::data_generator_ = nullptr;
+
+DataGenerator* DataGenerator::Instance() {
+  if (data_generator_ == nullptr) {
+    data_generator_ = new DataGenerator();
+  }
+  return data_generator_;
+}
+
+void DataGenerator::Generate() {
   // TODO(clssucceed@gmail.com): pose1和world系不重合
 
   // step 1: set ego pose
@@ -29,29 +35,26 @@ void DataGeneration(std::vector<Eigen::Vector3d>& pcl1,
   const double angle_resolution = 0.2;  // unit: degree
   const bool output_points_in_world_frame = true;
   GeneratePoints(ego_pose1, target_pose1, target_size, angle_resolution,
-                 output_points_in_world_frame, pcl1);
+                 pcl1_in_ego_frame_, pcl1_in_world_frame_);
   GeneratePoints(ego_pose2, target_pose2, target_size, angle_resolution,
-                 output_points_in_world_frame, pcl2);
+                 pcl2_in_ego_frame_, pcl2_in_world_frame_);
 
   // step 4: generate init pose
-  init_pose = target_pose2 * target_pose1.inverse();
+  icp_transform_ = target_pose2 * target_pose1.inverse();
 
   // step 5: visualization
-  // cv::Mat canvas;
-  // icp_cov::visualization::GenerateCanvas(canvas);
-  // icp_cov::visualization::DrawPoints(pcl1, canvas);
-  // icp_cov::visualization::Show(canvas);
-  icp_cov::Visualization::Instance()->DrawPoints(pcl1, kColorRed);
-  icp_cov::Visualization::Instance()->DrawPoints(pcl2, kColorGreen);
-  icp_cov::Visualization::Instance()->Show();
+  //   icp_cov::Visualization::Instance()->DrawPoints(pcl1_in_ego_frame_,
+  //   kColorRed);
+  //   icp_cov::Visualization::Instance()->DrawPoints(pcl2_in_ego_frame_,
+  //                                                  kColorGreen);
+  //   icp_cov::Visualization::Instance()->Show();
 }
 
-void GeneratePoints(const Eigen::Affine3d& ego_pose,
-                    const Eigen::Affine3d& target_pose,
-                    const Eigen::Vector3d& target_size,
-                    const double angle_resolution,
-                    const bool output_points_in_world_frame,
-                    std::vector<Eigen::Vector3d>& pcl) {
+void DataGenerator::GeneratePoints(
+    const Eigen::Affine3d& ego_pose, const Eigen::Affine3d& target_pose,
+    const Eigen::Vector3d& target_size, const double angle_resolution,
+    std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
+    std::vector<Eigen::Vector3d>& pcl_in_world_frame) {
   // step 1: generate line segment endpoints
   // step 1.1: generate line segment endpoints in target frame
   const Eigen::Vector3d ego_position = ego_pose.translation();
@@ -93,29 +96,30 @@ void GeneratePoints(const Eigen::Affine3d& ego_pose,
       end_point2_in_ego_frame, end_point3_in_ego_frame, angle_resolution,
       target_y_axis_laser_points_in_ego_frame);
 
-  // step 3: transform points to world frame
-  pcl.clear();
-  pcl.reserve(target_x_axis_laser_points_in_ego_frame.size() +
-              target_y_axis_laser_points_in_ego_frame.size());
-  if (output_points_in_world_frame) {
-    icp_cov::utils::TransformPoints(target_x_axis_laser_points_in_ego_frame,
-                                    ego_pose, pcl);
-    icp_cov::utils::TransformPoints(target_y_axis_laser_points_in_ego_frame,
-                                    ego_pose, pcl);
-  } else {
-    std::copy(target_x_axis_laser_points_in_ego_frame.begin(),
-              target_x_axis_laser_points_in_ego_frame.end(),
-              std::back_inserter(pcl));
-    std::copy(target_y_axis_laser_points_in_ego_frame.begin(),
-              target_y_axis_laser_points_in_ego_frame.end(),
-              std::back_inserter(pcl));
-  }
+  // step 3: save points
+  pcl_in_ego_frame.clear();
+  pcl_in_ego_frame.reserve(target_x_axis_laser_points_in_ego_frame.size() +
+                           target_y_axis_laser_points_in_ego_frame.size());
+  std::copy(target_x_axis_laser_points_in_ego_frame.begin(),
+            target_x_axis_laser_points_in_ego_frame.end(),
+            std::back_inserter(pcl_in_ego_frame));
+  std::copy(target_y_axis_laser_points_in_ego_frame.begin(),
+            target_y_axis_laser_points_in_ego_frame.end(),
+            std::back_inserter(pcl_in_ego_frame));
+
+  pcl_in_world_frame.clear();
+  pcl_in_world_frame.reserve(target_x_axis_laser_points_in_ego_frame.size() +
+                             target_y_axis_laser_points_in_ego_frame.size());
+  icp_cov::utils::TransformPoints(target_x_axis_laser_points_in_ego_frame,
+                                  ego_pose, pcl_in_world_frame);
+  icp_cov::utils::TransformPoints(target_y_axis_laser_points_in_ego_frame,
+                                  ego_pose, pcl_in_world_frame);
 }
 
 /**
  * point1, point2, generated_points are all in ego frame
  */
-void GeneratePointsOnLineSegmentInEgoFrame(
+void DataGenerator::GeneratePointsOnLineSegmentInEgoFrame(
     const Eigen::Vector3d& point1, const Eigen::Vector3d& point2,
     const double angle_resolution,
     std::vector<Eigen::Vector3d>& generated_points) {
@@ -147,5 +151,4 @@ void GeneratePointsOnLineSegmentInEgoFrame(
                                   0);
   }
 }
-}  // namespace data_gen
 }  // namespace icp_cov
