@@ -1,6 +1,7 @@
 #include "data_generation.h"
 
 #include "utils.h"
+#include "visualization.h"
 
 namespace icp_cov {
 namespace data_gen {
@@ -33,6 +34,12 @@ void DataGeneration(std::vector<Eigen::Vector3d>& pcl1,
 
   // step 4: generate init pose
   init_pose = target_pose2 * target_pose1.inverse();
+
+  // step 5: visualization
+  cv::Mat canvas;
+  icp_cov::visualization::GenerateCanvas(canvas);
+  icp_cov::visualization::DrawPoints(pcl1, canvas);
+  icp_cov::visualization::Show(canvas);
 }
 
 void GeneratePoints(const Eigen::Affine3d& ego_pose,
@@ -111,8 +118,8 @@ void GeneratePointsOnLineSegmentInEgoFrame(
   assert(angle_resolution > 1.0e-6);
   generated_points.clear();
   // step 1: calculate angle range
-  const double angle1 = std::atan2(point1(1), point1(0));
-  const double angle2 = std::atan2(point2(1), point2(0));
+  const double angle1 = std::atan2(point1(1), point1(0)) * 180 / M_PI;
+  const double angle2 = std::atan2(point2(1), point2(0)) * 180 / M_PI;
   const double begin_angle = std::min(angle1, angle2);
   const double end_angle = std::max(angle1, angle2);
   const int begin_angle_index = std::ceil(begin_angle / angle_resolution);
@@ -123,9 +130,9 @@ void GeneratePointsOnLineSegmentInEgoFrame(
   const Eigen::Vector3d line_segment =
       Eigen::Vector3d(point1(0), point1(1), 1)
           .cross(Eigen::Vector3d(point2(0), point2(1), 1));
-  for (int i = begin_angle_index; i < end_angle; ++i) {
+  for (int i = begin_angle_index; i < end_angle_index; ++i) {
     // step 2.2: calculate laser ray equation
-    const double angle = begin_angle_index * angle_resolution;
+    const double angle = i * angle_resolution * M_PI / 180.0;
     const Eigen::Vector3d laser_ray = Eigen::Vector3d(0, 0, 1).cross(
         Eigen::Vector3d(cos(angle), sin(angle), 1));
     // step 2.3: calculate intersection point
