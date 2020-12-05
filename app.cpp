@@ -1,3 +1,5 @@
+#include <pcl/pcl_config.h>
+
 #include <iostream>
 
 #include "color.h"
@@ -6,6 +8,7 @@
 #include "visualization.h"
 
 int main(int argc, char *argv[]) {
+  std::cout << PCL_VERSION << std::endl;
   std::cout << "icp_covariance test" << std::endl;
 
   // step 1: generate data
