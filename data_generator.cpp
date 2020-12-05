@@ -42,6 +42,12 @@ void DataGenerator::Generate() {
   // step 4: generate init pose
   icp_transform_ = target_pose2 * target_pose1.inverse();
 
+  // step 5: Add noise
+  AddNoiseToPoints(pcl1_in_ego_frame_, ego_pose1, pcl1_in_ego_frame_with_noise_,
+                   pcl1_in_world_frame_with_noise_);
+  AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2, pcl2_in_ego_frame_with_noise_,
+                   pcl2_in_world_frame_with_noise_);
+
   // step 5: visualization
   //   icp_cov::Visualization::Instance()->DrawPoints(pcl1_in_ego_frame_,
   //   kColorRed);
@@ -150,5 +156,22 @@ void DataGenerator::GeneratePointsOnLineSegmentInEgoFrame(
                                   intersection_point(1) / intersection_point(2),
                                   0);
   }
+}
+void DataGenerator::AddNoiseToPoints(
+    const std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
+    const Eigen::Affine3d& ego_pose,
+    std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise,
+    std::vector<Eigen::Vector3d>& pcl_in_world_frame_with_noise) {
+  pcl_in_ego_frame_with_noise.clear();
+  pcl_in_world_frame_with_noise.clear();
+  pcl_in_ego_frame_with_noise.reserve(pcl_in_ego_frame.size());
+  pcl_in_world_frame_with_noise.reserve(pcl_in_ego_frame.size());
+  constexpr double kNoiseSigma = 0.03;  // unit: m
+  for (const auto& point : pcl_in_ego_frame) {
+    pcl_in_ego_frame_with_noise.emplace_back(
+        point + icp_cov::utils::PointNoise(kNoiseSigma));
+  }
+  icp_cov::utils::TransformPoints(pcl_in_ego_frame_with_noise, ego_pose,
+                                  pcl_in_world_frame_with_noise);
 }
 }  // namespace icp_cov
