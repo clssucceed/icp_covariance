@@ -2,6 +2,7 @@
 
 #include "utils.h"
 #include "visualization.h"
+#include "color.h"
 
 namespace icp_cov {
 namespace data_gen {
@@ -36,10 +37,13 @@ void DataGeneration(std::vector<Eigen::Vector3d>& pcl1,
   init_pose = target_pose2 * target_pose1.inverse();
 
   // step 5: visualization
-  cv::Mat canvas;
-  icp_cov::visualization::GenerateCanvas(canvas);
-  icp_cov::visualization::DrawPoints(pcl1, canvas);
-  icp_cov::visualization::Show(canvas);
+  // cv::Mat canvas;
+  // icp_cov::visualization::GenerateCanvas(canvas);
+  // icp_cov::visualization::DrawPoints(pcl1, canvas);
+  // icp_cov::visualization::Show(canvas);
+  icp_cov::Visualization::Instance()->DrawPoints(pcl1, kColorRed);
+  icp_cov::Visualization::Instance()->DrawPoints(pcl2, kColorGreen);
+  icp_cov::Visualization::Instance()->Show();
 }
 
 void GeneratePoints(const Eigen::Affine3d& ego_pose,
