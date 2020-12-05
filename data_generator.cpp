@@ -47,6 +47,7 @@ void DataGenerator::Generate() {
                    pcl1_in_world_frame_with_noise_);
   AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2, pcl2_in_ego_frame_with_noise_,
                    pcl2_in_world_frame_with_noise_);
+  AddNoiseToIcpTransform();
 
   // step 5: visualization
   //   icp_cov::Visualization::Instance()->DrawPoints(pcl1_in_ego_frame_,
@@ -173,5 +174,11 @@ void DataGenerator::AddNoiseToPoints(
   }
   icp_cov::utils::TransformPoints(pcl_in_ego_frame_with_noise, ego_pose,
                                   pcl_in_world_frame_with_noise);
+}
+
+void DataGenerator::AddNoiseToIcpTransform() {
+  icp_transform_init_ =
+      icp_transform_ *
+      icp_cov::utils::TransformNoise(2.0 / 180 * M_PI, 0.2);  // 2deg + 0.2m
 }
 }  // namespace icp_cov

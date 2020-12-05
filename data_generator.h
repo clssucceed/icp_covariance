@@ -58,6 +58,7 @@ class DataGenerator {
       const Eigen::Affine3d& ego_pose,
       std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise,
       std::vector<Eigen::Vector3d>& pcl_in_world_frame_with_noise);
+  void AddNoiseToIcpTransform();    
 
  private:
   // ground truth
