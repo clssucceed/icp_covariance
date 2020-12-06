@@ -40,6 +40,20 @@ class DataGenerator {
   const Eigen::Affine3d& target_pose1() const { return target_pose1_; }
   const Eigen::Affine3d& target_pose2() const { return target_pose2_; }
 
+  const Eigen::Affine3d& ref_pose() const { return ref_pose_; }
+  const std::vector<Eigen::Vector3d>& pcl1_in_ref_frame() const {
+    return pcl1_in_ref_frame_;
+  }
+  const std::vector<Eigen::Vector3d>& pcl2_in_ref_frame() const {
+    return pcl2_in_ref_frame_;
+  }
+  const std::vector<Eigen::Vector3d>& pcl1_in_ref_frame_with_noise() const {
+    return pcl1_in_ref_frame_with_noise_;
+  }
+  const std::vector<Eigen::Vector3d>& pcl2_in_ref_frame_with_noise() const {
+    return pcl2_in_ref_frame_with_noise_;
+  }
+
  private:
   static DataGenerator* data_generator_;
 
@@ -65,29 +79,29 @@ class DataGenerator {
   void AddNoiseToIcpTransform();
 
  private:
-  // TODO(clssucceed@gmail.com): 引入ref frame
-
   // ground truth
   std::vector<Eigen::Vector3d> pcl1_in_ego_frame_;
   std::vector<Eigen::Vector3d> pcl2_in_ego_frame_;
   std::vector<Eigen::Vector3d> pcl1_in_world_frame_;
   std::vector<Eigen::Vector3d> pcl2_in_world_frame_;
-  std::vector<Eigen::Vector3d> pcl1_in_ref_frame_;
-  std::vector<Eigen::Vector3d> pcl2_in_ref_frame_;
   Eigen::Affine3d icp_transform_;
   Eigen::Affine3d ego_pose1_;
   Eigen::Affine3d ego_pose2_;
   Eigen::Affine3d target_pose1_;
   Eigen::Affine3d target_pose2_;
-  Eigen::Affine3d ref_pose_;
 
   // with noise
   std::vector<Eigen::Vector3d> pcl1_in_ego_frame_with_noise_;
   std::vector<Eigen::Vector3d> pcl2_in_ego_frame_with_noise_;
   std::vector<Eigen::Vector3d> pcl1_in_world_frame_with_noise_;
   std::vector<Eigen::Vector3d> pcl2_in_world_frame_with_noise_;
+  Eigen::Affine3d icp_transform_init_;
+
+  // for visualization
+  Eigen::Affine3d ref_pose_;
+  std::vector<Eigen::Vector3d> pcl1_in_ref_frame_;
+  std::vector<Eigen::Vector3d> pcl2_in_ref_frame_;
   std::vector<Eigen::Vector3d> pcl1_in_ref_frame_with_noise_;
   std::vector<Eigen::Vector3d> pcl2_in_ref_frame_with_noise_;
-  Eigen::Affine3d icp_transform_init_;
 };
 }  // namespace icp_cov

@@ -16,8 +16,6 @@ DataGenerator* DataGenerator::Instance() {
 }
 
 void DataGenerator::Generate() {
-  // TODO(clssucceed@gmail.com): pose1和world系不重合
-
   // step 1: set ego pose
   ego_pose1_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
                                             Eigen::Vector3d::Zero());
@@ -43,18 +41,26 @@ void DataGenerator::Generate() {
   icp_transform_ = target_pose2_ * target_pose1_.inverse();
 
   // step 5: Add noise
-  AddNoiseToPoints(pcl1_in_ego_frame_, ego_pose1_, pcl1_in_ego_frame_with_noise_,
+  AddNoiseToPoints(pcl1_in_ego_frame_, ego_pose1_,
+                   pcl1_in_ego_frame_with_noise_,
                    pcl1_in_world_frame_with_noise_);
-  AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2_, pcl2_in_ego_frame_with_noise_,
+  AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2_,
+                   pcl2_in_ego_frame_with_noise_,
                    pcl2_in_world_frame_with_noise_);
   AddNoiseToIcpTransform();
 
   // step 6: visualization
-  //   icp_cov::Visualization::Instance()->DrawPoints(pcl1_in_ego_frame_,
-  //   kColorRed);
-  //   icp_cov::Visualization::Instance()->DrawPoints(pcl2_in_ego_frame_,
-  //                                                  kColorGreen);
-  //   icp_cov::Visualization::Instance()->Show();
+  ref_pose_ = ego_pose2_;
+  icp_cov::utils::TransformPoints(pcl1_in_world_frame_, ref_pose_.inverse(),
+                                  pcl1_in_ref_frame_);
+  icp_cov::utils::TransformPoints(pcl2_in_world_frame_, ref_pose_.inverse(),
+                                  pcl2_in_ref_frame_);
+  icp_cov::utils::TransformPoints(pcl1_in_world_frame_with_noise_,
+                                  ref_pose_.inverse(),
+                                  pcl1_in_ref_frame_with_noise_);
+  icp_cov::utils::TransformPoints(pcl2_in_world_frame_with_noise_,
+                                  ref_pose_.inverse(),
+                                  pcl2_in_ref_frame_with_noise_);
 }
 
 void DataGenerator::GeneratePoints(

@@ -15,12 +15,12 @@ int main(int argc, char *argv[]) {
   // step 1: generate data
   // pcl
   auto data_generator = icp_cov::DataGenerator::Instance();
-  auto pcl1_in_ego_frame = data_generator->pcl1_in_ego_frame();
-  auto pcl2_in_ego_frame = data_generator->pcl2_in_ego_frame();
-  auto pcl1_in_ego_frame_with_noise =
-      data_generator->pcl1_in_ego_frame_with_noise();
-  auto pcl2_in_ego_frame_with_noise =
-      data_generator->pcl2_in_ego_frame_with_noise();
+  auto pcl1_in_ref_frame = data_generator->pcl1_in_ref_frame();
+  auto pcl2_in_ref_frame = data_generator->pcl2_in_ref_frame();
+  auto pcl1_in_ref_frame_with_noise =
+      data_generator->pcl1_in_ref_frame_with_noise();
+  auto pcl2_in_ref_frame_with_noise =
+      data_generator->pcl2_in_ref_frame_with_noise();
   auto pcl1_in_world_frame = data_generator->pcl1_in_world_frame();
   auto pcl2_in_world_frame = data_generator->pcl2_in_world_frame();
   auto pcl1_in_world_frame_with_noise =
@@ -28,10 +28,10 @@ int main(int argc, char *argv[]) {
   auto pcl2_in_world_frame_with_noise =
       data_generator->pcl2_in_world_frame_with_noise();
   auto visualization = icp_cov::Visualization::Instance();
-  visualization->DrawPoints(pcl1_in_ego_frame, icp_cov::kColorRed);
-  visualization->DrawPoints(pcl2_in_ego_frame, icp_cov::kColorGreen);
-  visualization->DrawPoints(pcl1_in_ego_frame_with_noise, icp_cov::kColorPink);
-  visualization->DrawPoints(pcl2_in_ego_frame_with_noise, icp_cov::kColorCyan);
+  visualization->DrawPoints(pcl1_in_ref_frame, icp_cov::kColorRed);
+  visualization->DrawPoints(pcl2_in_ref_frame, icp_cov::kColorGreen);
+  visualization->DrawPoints(pcl1_in_ref_frame_with_noise, icp_cov::kColorPink);
+  visualization->DrawPoints(pcl2_in_ref_frame_with_noise, icp_cov::kColorCyan);
   // icp transform
   Eigen::Affine3d icp_transform_gt = data_generator->icp_transform();
   Eigen::Affine3d icp_transform_init = data_generator->icp_transform_init();
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
       pcl_alignment->eigen_pcl1_aligned();
   std::vector<Eigen::Vector3d> pcl1_aligned_in_ref_frame;
   icp_cov::utils::TransformPoints(pcl1_aligned_in_world_frame,
-                                  data_generator->ego_pose2().inverse(),
+                                  data_generator->ref_pose().inverse(),
                                   pcl1_aligned_in_ref_frame);
   visualization->DrawPoints(pcl1_aligned_in_ref_frame, icp_cov::kColorWhite);
 

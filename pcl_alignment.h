@@ -47,6 +47,7 @@ class PclAlignment {
   void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
 
  private:
+  // all points are in world frame
   EigenPointCloud eigen_pcl1_;
   EigenPointCloud eigen_pcl1_aligned_;
   EigenPointCloud eigen_pcl2_;
