@@ -65,6 +65,8 @@ class DataGenerator {
   void AddNoiseToIcpTransform();
 
  private:
+  // TODO(clssucceed@gmail.com): 引入ref frame
+
   // ground truth
   std::vector<Eigen::Vector3d> pcl1_in_ego_frame_;
   std::vector<Eigen::Vector3d> pcl2_in_ego_frame_;
