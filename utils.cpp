@@ -46,10 +46,9 @@ Eigen::Affine3d TransformNoise(const double rotation_sigma,
   static std::normal_distribution<double> n_rotation(0, rotation_sigma);
   static std::normal_distribution<double> n_translation(0, rotation_sigma);
   // 生成Transform noise
-  Eigen::Vector3d theta_noise(n_rotation(e), n_rotation(e), n_rotation(e));
+  Eigen::Vector3d theta_noise(0, 0, n_rotation(e));
   Eigen::Matrix3d rotation_noise{DeltaQ(theta_noise)};
-  Eigen::Vector3d translation_noise(n_translation(e), n_translation(e),
-                                    n_translation(e));
+  Eigen::Vector3d translation_noise(n_translation(e), n_translation(e), 0);
   return RtToAffine3d(rotation_noise, translation_noise);
 }
 
