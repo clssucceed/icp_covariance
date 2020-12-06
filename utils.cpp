@@ -30,7 +30,7 @@ Eigen::Vector3d PointNoise(const double sigma) {
   // 产生正态分布对象
   static std::normal_distribution<double> n(0, sigma);
   // 生成point noise
-  return Eigen::Vector3d(n(e), n(e), n(e));
+  return Eigen::Vector3d(n(e), n(e), 0);
 }
 
 Eigen::Matrix3d SkewMatrix(const Eigen::Vector3d& v) {

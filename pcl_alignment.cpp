@@ -35,7 +35,8 @@ void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
   }
 }
 
-// TODO(clssucceed@gmail.com): 尝试2d icp
+// TODO(clssucceed@gmail.com): 尝试2d
+// icp(pcl::registration::TransformationEstimation2D)
 void PclAlignment::Align() {
   assert(pcl1_);
   assert(pcl2_);
