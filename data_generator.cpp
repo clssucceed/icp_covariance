@@ -166,6 +166,8 @@ void DataGenerator::GeneratePointsOnLineSegmentInEgoFrame(
                                   0);
   }
 }
+// TODO(clssucceed@gmail.com): laser point noise is one-dimensional(along the
+// laser ray), not multi-dimensional
 void DataGenerator::AddNoiseToPoints(
     const std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
     const Eigen::Affine3d& ego_pose,

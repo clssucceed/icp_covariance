@@ -64,6 +64,7 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     std::cout << "icp_fitness_score: " << pcl_alignment->icp_fitness_score()
               << std::endl;
     // step 3: save icp_transform_est
+    // TODO(clssucceed@gmail.com): icp_transform_est to yprxyz using sophus(SE(3) -> se(3))
     Eigen::Matrix<double, 6, 1> yprxyz;
     yprxyz.head(3) = ypr;
     yprxyz.tail(3) = xyz;
