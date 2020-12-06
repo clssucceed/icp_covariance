@@ -16,6 +16,7 @@ add_executable(icp_covariance
   data_generator.cpp 
   utils.cpp 
   visualization.cpp
-  pcl_alignment.cpp)
+  pcl_alignment.cpp
+  icp_covariance.cpp)
 
 target_link_libraries(icp_covariance Eigen3::Eigen ${OpenCV_LIBS} ${PCL_LIBRARIES})

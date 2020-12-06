@@ -7,6 +7,8 @@ class DataGenerator {
   static DataGenerator* Instance();
 
  public:
+  void Generate(); // interface to generate new data
+
   const std::vector<Eigen::Vector3d>& pcl1_in_ego_frame() const {
     return pcl1_in_ego_frame_;
   }
@@ -60,7 +62,6 @@ class DataGenerator {
  private:
   DataGenerator() { Generate(); }
 
-  void Generate();
   void GeneratePoints(const Eigen::Affine3d& ego_pose,
                       const Eigen::Affine3d& target_pose,
                       const Eigen::Vector3d& target_size,

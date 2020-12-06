@@ -15,5 +15,6 @@ Eigen::Affine3d TransformNoise(const double rotation_sigma,
                                const double translation_sigma);
 Eigen::Vector3d R2ypr(const Eigen::Matrix3d& R);
 Eigen::Quaterniond DeltaQ(const Eigen::Vector3d& theta);
+Eigen::MatrixXd Covariance(const Eigen::MatrixXd& input);
 }  // namespace utils
 }  // namespace icp_cov

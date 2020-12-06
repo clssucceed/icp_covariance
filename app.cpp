@@ -7,6 +7,7 @@
 #include "pcl_alignment.h"
 #include "utils.h"
 #include "visualization.h"
+#include "icp_covariance.h"
 
 int main(int argc, char *argv[]) {
   std::cout << PCL_VERSION << std::endl;
@@ -15,6 +16,7 @@ int main(int argc, char *argv[]) {
   // step 1: generate data
   // pcl
   auto data_generator = icp_cov::DataGenerator::Instance();
+  data_generator->Generate();
   auto pcl1_in_ref_frame = data_generator->pcl1_in_ref_frame();
   auto pcl2_in_ref_frame = data_generator->pcl2_in_ref_frame();
   auto pcl1_in_ref_frame_with_noise =
@@ -64,9 +66,25 @@ int main(int argc, char *argv[]) {
   visualization->DrawPoints(pcl1_aligned_in_ref_frame, icp_cov::kColorWhite);
 
   // step 3: calc icp covariance
-  // true / hessian / proposed
+  auto icp_covariance = icp_cov::IcpCovariance::Instance();
+  icp_covariance->CalculateIcpCov();
+  // step 3.1: monte carlo to generate true icp cov
+  // step 3.2: calc icp cov from hessian
+  // step 3.3: calc icp cov from cost function
 
-  // step 4: visualization
+  // step 4: calc velocity and its covariance (monte carlo vs linearization +
+  // uncertainty propagation)
+
+  // step 5: calc velocity norm and its covariance (monte carlo vs linearization
+  // + uncertainty propagation)
+
+  // step 6: calc velocity direction and its covariance (monte carlo vs
+  // linearization + uncertainty propagation)
+
+  // step 7: calc angular velocity and its covariance (monte carlo vs
+  // linearization + uncertainty propagation)
+
+  // step 8: visualization
   visualization->Show();
 
   return 0;

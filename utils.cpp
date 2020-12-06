@@ -77,6 +77,21 @@ Eigen::Quaterniond DeltaQ(const Eigen::Vector3d& theta) {
   dq.z() = half_theta.z();
   return dq.normalized();
 }
+Eigen::MatrixXd Covariance(const Eigen::MatrixXd& input) {
+  Eigen::MatrixXd meanVec = input.colwise().mean();
+  //求取上述的零均值列向量矩阵
+  Eigen::MatrixXd zeroMeanMat = input;
+  //将列向量均值从MatrixXd 转换为行向量 RowVectorXd
+  Eigen::RowVectorXd meanVecRow(
+      Eigen::RowVectorXd::Map(meanVec.data(), input.cols()));
+  zeroMeanMat.rowwise() -= meanVecRow;
+  //计算协方差
+  Eigen::MatrixXd covMat =
+      (zeroMeanMat.adjoint() * zeroMeanMat) / double(input.rows() - 1);
+
+  std::cout << "mean: \n" << meanVec << std::endl;
+  std::cout << "cov: \n" << covMat << std::endl;
+}
 
 }  // namespace utils
 }  // namespace icp_cov
