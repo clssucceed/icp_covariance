@@ -2,6 +2,8 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+#include "config.h"
+
 namespace icp_cov {
 class Visualization {
  public:
@@ -12,9 +14,9 @@ class Visualization {
 
  private:
   // const
-  static constexpr double kResolution = 0.005;  // unit: m/pixel
-  static constexpr double kWidthRange = 20;     // unit: m
-  static constexpr double kHeightRange = 20;    // unit: m
+  static constexpr double kResolution = kPixelResolution;  // unit: m/pixel
+  static constexpr double kWidthRange = kEgoYRange;        // unit: m
+  static constexpr double kHeightRange = kEgoXRange;       // unit: m
   static constexpr int kImageWidth = kWidthRange * 2 / kResolution;
   static constexpr int kImageHeight = kHeightRange * 2 / kResolution;
   const cv::Point2d kCanvasCenter;

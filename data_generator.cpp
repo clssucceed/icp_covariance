@@ -24,11 +24,13 @@ void DataGenerator::Generate() {
 
   // step 2: set target pose
   target_pose1_ =
-      ego_pose1_ * icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
-                                                Eigen::Vector3d(10, 5, 0));
+      ego_pose1_ * icp_cov::utils::RtToAffine3d(
+                       Eigen::Matrix3d::Identity(),
+                       Eigen::Vector3d(kTargetXCoordinateInEgo, 5, 0));
   target_pose2_ =
-      ego_pose2_ * icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
-                                                Eigen::Vector3d(11, 5, 0));
+      ego_pose2_ * icp_cov::utils::RtToAffine3d(
+                       Eigen::Matrix3d::Identity(),
+                       Eigen::Vector3d(kTargetXCoordinateInEgo + 1, 5, 0));
 
   // step 3: generate points
   const Eigen::Vector3d target_size(4, 2, 0);
