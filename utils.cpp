@@ -4,6 +4,11 @@
 #include <iostream>
 #include <random>
 
+#include "color.h"
+#include "data_generator.h"
+#include "pcl_alignment.h"
+#include "visualization.h"
+
 namespace icp_cov {
 namespace utils {
 
@@ -109,6 +114,44 @@ void PrintPoints(const std::vector<Eigen::Vector3d>& points,
     std::cout << point.transpose() << "; ";
   }
   std::cout << std::endl;
+}
+
+void DebugThisSimulation() {
+  std::cout << "###############################################" << std::endl;
+  auto data_generator = icp_cov::DataGenerator::Instance();
+  auto pcl1_in_ref_frame = data_generator->pcl1_in_ref_frame();
+  auto pcl2_in_ref_frame = data_generator->pcl2_in_ref_frame();
+  auto pcl1_in_ref_frame_with_noise =
+      data_generator->pcl1_in_ref_frame_with_noise();
+  auto pcl2_in_ref_frame_with_noise =
+      data_generator->pcl2_in_ref_frame_with_noise();
+  auto visualization = icp_cov::Visualization::Instance();
+  visualization->ResetCanvas();
+  visualization->DrawPoints(pcl1_in_ref_frame, icp_cov::kColorRed);
+  visualization->DrawPoints(pcl2_in_ref_frame, icp_cov::kColorGreen);
+  visualization->DrawPoints(pcl1_in_ref_frame_with_noise, icp_cov::kColorPink);
+  visualization->DrawPoints(pcl2_in_ref_frame_with_noise, icp_cov::kColorCyan);
+  auto pcl_alignment = icp_cov::PclAlignment::Instance();
+  std::vector<Eigen::Vector3d> pcl1_aligned_in_world_frame =
+      pcl_alignment->eigen_pcl1_aligned();
+  std::vector<Eigen::Vector3d> pcl1_aligned_in_ref_frame;
+  icp_cov::utils::TransformPoints(pcl1_aligned_in_world_frame,
+                                  data_generator->ref_pose().inverse(),
+                                  pcl1_aligned_in_ref_frame);
+  visualization->DrawPoints(pcl1_aligned_in_ref_frame, icp_cov::kColorWhite);
+  Eigen::Affine3d icp_transform_est = pcl_alignment->icp_transform_est();
+  Eigen::Vector3d ypr = icp_cov::utils::R2ypr(icp_transform_est.rotation());
+  Eigen::Vector3d xyz = icp_transform_est.translation();
+  const int kScale = 1000;
+  const std::string image_name =
+      std::to_string(static_cast<int>(ypr(0) * kScale)) + "_" +
+      std::to_string(static_cast<int>(ypr(1) * kScale)) + "_" +
+      std::to_string(static_cast<int>(ypr(2) * kScale)) + "_" +
+      std::to_string(static_cast<int>(xyz(0) * kScale)) + "_" +
+      std::to_string(static_cast<int>(xyz(1) * kScale)) + "_" +
+      std::to_string(static_cast<int>(xyz(2) * kScale)) + ".png";
+  visualization->Save(image_name);
+  pcl_alignment->Debug();
 }
 }  // namespace utils
 }  // namespace icp_cov

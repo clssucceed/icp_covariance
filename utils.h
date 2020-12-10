@@ -19,5 +19,6 @@ Eigen::MatrixXd Covariance(const Eigen::MatrixXd& input);
 double AngleMod(double x);
 void PrintPoints(const std::vector<Eigen::Vector3d>& points,
                  const std::string& points_name);
+void DebugThisSimulation();                 
 }  // namespace utils
 }  // namespace icp_cov
