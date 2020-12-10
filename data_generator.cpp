@@ -30,7 +30,7 @@ void DataGenerator::Generate() {
                                                    kTargetYCoordinateInEgo, 0));
   target_pose2_ = ego_pose2_ * icp_cov::utils::RtToAffine3d(
                                    Eigen::Matrix3d::Identity(),
-                                   Eigen::Vector3d(kTargetXCoordinateInEgo,
+                                   Eigen::Vector3d(kTargetXCoordinateInEgo + 2,
                                                    kTargetYCoordinateInEgo, 0));
 
   // step 3: generate points
