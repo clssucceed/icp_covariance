@@ -30,6 +30,7 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
   constexpr int kIterationsForMonteCarlo = 300;
   // each row is a yprxyz
   Eigen::Matrix<double, kIterationsForMonteCarlo, 6> yprxyzs;
+  Eigen::Matrix<double, kIterationsForMonteCarlo, 3> velocitys;
   for (int i = 0; i < kIterationsForMonteCarlo; ++i) {
     // step 1: generate data
     // pcl
@@ -85,8 +86,14 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     yprxyz.head(3) = ypr;
     yprxyz.tail(3) = xyz;
     yprxyzs.row(i) = yprxyz.transpose();
+    // step 4: calc vel and save
+    Eigen::Vector3d anchor_point1 = data_generator->ego_pose1().translation();
+    Eigen::Vector3d anchor_point1_transformed = icp_transform_est * anchor_point1;
+    Eigen::Vector3d velocity = (anchor_point1_transformed - anchor_point1) / 0.1;
+    velocitys.row(i) = velocity.transpose();
   }
   icp_cov_from_monte_carlo_ = icp_cov::utils::Covariance(yprxyzs);
+  vel_cov_from_monte_carlo_ = icp_cov::utils::Covariance(velocitys);
 }
 
 void IcpCovariance::IcpCovFromHessian() {}

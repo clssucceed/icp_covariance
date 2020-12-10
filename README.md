@@ -7,8 +7,8 @@
 * utils: 工具函数
 
 ## 实验结果
-* 目标车锚点坐标(10, 5, 0)如图所示 ![icp_cov_from_monte_carlo](./image/icp_cov_from_monte_carlo.png)
-* 目标车锚点坐标(10, 0.001, 0)如图所示 ![icp_cov_from_monte_carlo](./image/icp_cov_anchor_point_10-0_001.png)
+* 目标车锚点坐标(10, 5, 0)如图所示 ![icp_cov_from_monte_carlo](./image/cov_for_anchor_point_10-5.png)
+* 目标车锚点坐标(10, 0.001, 0)如图所示 ![icp_cov_from_monte_carlo](./image/cov_for_anchor_point_10-0_001.png)
 ### icp_cov受哪些因素影响
 * target size越大，icp_cov越小
 * angle resolution变大或者变小，icp_cov都有可能变大

@@ -3,6 +3,7 @@
 namespace icp_cov {
 class IcpCovariance {
   using IcpCovMatrix = Eigen::MatrixXd;
+  using VelCovMatrix = Eigen::MatrixXd;
 
  public:
   static IcpCovariance* Instance();
@@ -29,5 +30,7 @@ class IcpCovariance {
   IcpCovMatrix icp_cov_from_monte_carlo_;
   IcpCovMatrix icp_cov_from_hessian_;
   IcpCovMatrix icp_cov_from_cost_function_;
+
+  VelCovMatrix vel_cov_from_monte_carlo_;
 };
 }  // namespace icp_cov
