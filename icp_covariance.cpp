@@ -30,7 +30,10 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
   constexpr int kIterationsForMonteCarlo = 300;
   // each row is a yprxyz
   Eigen::Matrix<double, kIterationsForMonteCarlo, 6> yprxyzs;
+  Eigen::Matrix<double, kIterationsForMonteCarlo, 1> yaw_rates;
   Eigen::Matrix<double, kIterationsForMonteCarlo, 3> velocitys;
+  Eigen::Matrix<double, kIterationsForMonteCarlo, 1> vel_norms;
+  Eigen::Matrix<double, kIterationsForMonteCarlo, 1> vel_directions;
   for (int i = 0; i < kIterationsForMonteCarlo; ++i) {
     // step 1: generate data
     // pcl
@@ -91,9 +94,20 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     Eigen::Vector3d anchor_point1_transformed = icp_transform_est * anchor_point1;
     Eigen::Vector3d velocity = (anchor_point1_transformed - anchor_point1) / 0.1;
     velocitys.row(i) = velocity.transpose();
+    vel_norms(i) = velocity.norm();
+    vel_directions(i) = std::atan2(velocity(1), velocity(0)) * kRadToDeg;
+    yaw_rates(i) = ypr(0) / 0.1;
   }
+  std::cout << "icp_cov_from_monte_carlo: " << std::endl;
   icp_cov_from_monte_carlo_ = icp_cov::utils::Covariance(yprxyzs);
+  std::cout << "vel_cov_from_monte_carlo: " << std::endl;
   vel_cov_from_monte_carlo_ = icp_cov::utils::Covariance(velocitys);
+  std::cout << "vel_norm_cov_from_monte_carlo: " << std::endl;
+  vel_norm_cov_from_monte_carlo_ = icp_cov::utils::Covariance(vel_norms);
+  std::cout << "vel_direction_cov_from_monte_carlo: " << std::endl;
+  vel_direction_cov_from_monte_carlo_ = icp_cov::utils::Covariance(vel_directions);
+  std::cout << "yaw_rate_cov_from_monte_carlo: " << std::endl;
+  yaw_rate_cov_from_monte_carlo_ = icp_cov::utils::Covariance(yaw_rates);
 }
 
 void IcpCovariance::IcpCovFromHessian() {}

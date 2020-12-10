@@ -2,19 +2,18 @@
 
 namespace icp_cov {
 class IcpCovariance {
-  using IcpCovMatrix = Eigen::MatrixXd;
-  using VelCovMatrix = Eigen::MatrixXd;
+  using CovMatrix = Eigen::MatrixXd;
 
  public:
   static IcpCovariance* Instance();
 
  public:
   void CalculateIcpCov();
-  IcpCovMatrix icp_cov_from_monte_carlo() const {
+  CovMatrix icp_cov_from_monte_carlo() const {
     return icp_cov_from_monte_carlo_;
   };
-  IcpCovMatrix icp_cov_from_hessian() const { return icp_cov_from_hessian_; };
-  IcpCovMatrix icp_cov_from_cost_function() const {
+  CovMatrix icp_cov_from_hessian() const { return icp_cov_from_hessian_; };
+  CovMatrix icp_cov_from_cost_function() const {
     return icp_cov_from_cost_function_;
   };
 
@@ -27,10 +26,13 @@ class IcpCovariance {
   void IcpCovFromCostFunction();
 
  private:
-  IcpCovMatrix icp_cov_from_monte_carlo_;
-  IcpCovMatrix icp_cov_from_hessian_;
-  IcpCovMatrix icp_cov_from_cost_function_;
+  CovMatrix icp_cov_from_monte_carlo_;
+  CovMatrix icp_cov_from_hessian_;
+  CovMatrix icp_cov_from_cost_function_;
 
-  VelCovMatrix vel_cov_from_monte_carlo_;
+  CovMatrix vel_cov_from_monte_carlo_;
+  CovMatrix vel_norm_cov_from_monte_carlo_;
+  CovMatrix vel_direction_cov_from_monte_carlo_;
+  CovMatrix yaw_rate_cov_from_monte_carlo_;
 };
 }  // namespace icp_cov
