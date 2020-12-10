@@ -61,7 +61,7 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     Eigen::Vector3d ypr = icp_cov::utils::R2ypr(icp_transform_est.rotation());
     Eigen::Vector3d xyz = icp_transform_est.translation();
     if (ypr.norm() > 90) {
-      icp_cov::utils::DebugThisSimulation();
+      // icp_cov::utils::DebugThisSimulation();
       // 如果icp出的ypr出现180度歧义性,则放弃这次结果
       std::cout << "bad "
                    "simulation#################################################"
