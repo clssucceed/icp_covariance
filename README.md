@@ -7,7 +7,8 @@
 * utils: 工具函数
 
 ## 实验结果
-* icp_cov_from_monte_carlo如图所示 ![icp_cov_from_monte_carlo](./image/icp_cov_from_monte_carlo.png)
+* 目标车锚点坐标(10, 5, 0)如图所示 ![icp_cov_from_monte_carlo](./image/icp_cov_from_monte_carlo.png)
+* 目标车锚点坐标(10, 0.001, 0)如图所示 ![icp_cov_from_monte_carlo](./image/icp_cov_anchor_point_10-0_001.png)
 ### icp_cov受哪些因素影响
 * target size越大，icp_cov越小
 * angle resolution变大或者变小，icp_cov都有可能变大
@@ -18,3 +19,4 @@
 
 ## TODO
 * 使用相同的生成数据X_{t-1}, X_t，T_init生成图像数据，并进行of_cov的计算
+* 每一次的仿真结果都保存下来(原始数据，中间结果，计算结果，可视化图像)

@@ -7,7 +7,7 @@ class DataGenerator {
   static DataGenerator* Instance();
 
  public:
-  void Generate(); // interface to generate new data
+  void Generate();  // interface to generate new data
 
   const std::vector<Eigen::Vector3d>& pcl1_in_ego_frame() const {
     return pcl1_in_ego_frame_;
@@ -78,6 +78,20 @@ class DataGenerator {
       std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise,
       std::vector<Eigen::Vector3d>& pcl_in_world_frame_with_noise);
   void AddNoiseToIcpTransform();
+  void Reset() {
+    pcl1_in_ego_frame_.clear();
+    pcl2_in_ego_frame_.clear();
+    pcl1_in_world_frame_.clear();
+    pcl2_in_world_frame_.clear();
+    pcl1_in_ego_frame_with_noise_.clear();
+    pcl2_in_ego_frame_with_noise_.clear();
+    pcl1_in_world_frame_with_noise_.clear();
+    pcl2_in_world_frame_with_noise_.clear();
+    pcl1_in_ref_frame_.clear();
+    pcl2_in_ref_frame_.clear();
+    pcl1_in_ref_frame_with_noise_.clear();
+    pcl2_in_ref_frame_with_noise_.clear();
+  }
 
  private:
   // ground truth

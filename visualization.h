@@ -11,6 +11,8 @@ class Visualization {
   void DrawPoints(const std::vector<Eigen::Vector3d>& points,
                   const cv::Scalar& point_color);
   void Show();
+  void Save(const std::string& name);
+  void ResetCanvas() { GenerateCanvas(); }
 
  private:
   // const

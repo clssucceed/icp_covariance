@@ -2,6 +2,8 @@
 
 #include <pcl/registration/icp.h>
 
+#include "utils.h"
+
 namespace icp_cov {
 PclAlignment* PclAlignment::pcl_alignment_ = nullptr;
 
@@ -40,6 +42,7 @@ void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
 void PclAlignment::Align() {
   assert(pcl1_);
   assert(pcl2_);
+  pcl1_aligned_.reset(new PointCloudT);
   assert(pcl1_aligned_);
   pcl::IterativeClosestPoint<PointT, PointT> icp;
   icp.setMaximumIterations(kMaxIterations);
@@ -50,5 +53,11 @@ void PclAlignment::Align() {
   PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
   icp_transform_est_ = icp.getFinalTransformation().cast<double>();
   icp_fitness_score_ = icp.getFitnessScore();
+}
+
+void PclAlignment::Debug() {
+  icp_cov::utils::PrintPoints(eigen_pcl1_, "pcl1");
+  icp_cov::utils::PrintPoints(eigen_pcl2_, "pcl2");
+  icp_cov::utils::PrintPoints(eigen_pcl1_aligned_, "pcl1_aligned");
 }
 }  // namespace icp_cov

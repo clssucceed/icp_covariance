@@ -46,6 +46,10 @@ void Visualization::Show() {
   cv::waitKey(0);
 }
 
+void Visualization::Save(const std::string& name) {
+  cv::imwrite(name, canvas_);
+}
+
 cv::Point2d Visualization::CoordinateTransformation(
     const Eigen::Vector3d& point) {
   return cv::Point2d(point(1), -point(0)) / kResolution + kCanvasCenter;

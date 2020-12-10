@@ -93,5 +93,22 @@ Eigen::MatrixXd Covariance(const Eigen::MatrixXd& input) {
   std::cout << "cov: \n" << cov << std::endl;
 }
 
+double AngleMod(double x) {
+  if (x > 90) {
+    return x - 180;
+  } else if (x < -90) {
+    return x + 180;
+  } else {
+    return x;
+  }
+}
+void PrintPoints(const std::vector<Eigen::Vector3d>& points,
+                 const std::string& points_name) {
+  std::cout << points_name << ": size = " << points.size() << std::endl;
+  for (const auto& point : points) {
+    std::cout << point.transpose() << "; ";
+  }
+  std::cout << std::endl;
+}
 }  // namespace utils
 }  // namespace icp_cov

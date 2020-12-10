@@ -37,6 +37,7 @@ class PclAlignment {
   }
   const EigenPointCloud& eigen_pcl2() const { return eigen_pcl2_; }
   void Align();
+  void Debug();
 
  private:
   static PclAlignment* pcl_alignment_;
