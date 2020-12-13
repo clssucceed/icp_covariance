@@ -44,8 +44,8 @@
   * 单次仿真实验结果保存:每一次的仿真结果都保存下来(原始数据，中间结果，计算结果，可视化图像)
   * 引入参数文件（每次加入参数需要改动的地方尽量少）
 * 逻辑细节完善  
-  * vel_est在pcl_alignment中计算, vel_gt在data_generator中计算
-  * pcl_alignment的点云是ego系的
+  * vel_est在pcl_alignment中计算, vel_gt在data_generator中计算 (DONE)
+  * pcl_alignment的点云是ego系的 (DONE)
     * 如果是世界系，当ego position是几千公里时，会出现点云精度不够的问题
     * 如果是世界系，计算出的icp_transform进一步直接计算出的世界系的绝对速度对icp_transform的精度比较敏感.但是，如果是ego系，计算出的ego系速度对于icp_transform的精度就不会那么敏感．具体而言: ego_position为1000m, target_position_in_ego为10m，则通过世界系icp_transform计算出的绝对速度关于旋转误差的敏感程度是间接算出的绝对速度的敏感程度的100倍．
 * 没有解释清楚的现象
