@@ -25,7 +25,7 @@
 
 ## TODO
 * icp仿真: icp_cov计算的绝对速度和绝对旋转角速度的精度评估＋如何识别退化情况(cov / fitness / ...)
-  * 比较直接计算绝对速度 vs 先计算相对速度再推算绝对速度两种速度计算方案对于点云噪声的响应大小 
+  * 比较直接计算绝对速度 vs 先计算相对速度再推算绝对速度两种速度计算方案对于点云噪声的响应大小 (DONE) 
   * 3d实验
   * hessian + cost function计算icp_cov
   * 分析影响icp_cov的因素
@@ -34,8 +34,12 @@
 * 可视化(1d,2d,3d) ros visualization: rviz + PlotJuggler + Pangolin
 * 视觉仿真
   * 使用相同的生成数据X_{t-1}, X_t，T_init生成图像数据，并进行of_cov的计算
+* 视觉 + icp: 视觉提供高精度旋转,icp提供高精度位置  
 * 工具链
   * 单次仿真实验结果保存:每一次的仿真结果都保存下来(原始数据，中间结果，计算结果，可视化图像)
   * 引入参数文件（每次加入参数需要改动的地方尽量少）
-* 代码质量
-  * 实现StateManager类管理自车和目标车位姿单例，方便在全局任何需要的地方访问到，比如用于计算速度
+* 逻辑细节完善  
+  * vel_est在pcl_alignment中计算, vel_gt在data_generator中计算
+  * pcl_alignment的点云是ego系的
+    * 如果是世界系，当ego position是几千公里时，会出现点云精度不够的问题
+    * 如果是世界系，计算出的icp_transform进一步直接计算出的世界系的绝对速度对icp_transform的精度比较敏感.但是，如果是ego系，计算出的ego系速度对于icp_transform的精度就不会那么敏感．具体而言: ego_position为1000m, target_position_in_ego为10m，则通过世界系icp_transform计算出的绝对速度关于旋转误差的敏感程度是间接算出的绝对速度的敏感程度的100倍．
