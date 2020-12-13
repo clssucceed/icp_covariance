@@ -1,3 +1,4 @@
+#pragma once
 namespace icp_cov {
 constexpr double kRadToDeg = 180.0 / M_PI;
 constexpr double kDegToRad = 1.0 / kRadToDeg;
