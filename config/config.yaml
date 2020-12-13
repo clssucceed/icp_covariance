@@ -1,0 +1,44 @@
+# ego pose in world frame
+ego_pose1_in_world_frame: 
+  yaw: 0.0 # unit: deg
+  pitch: 0.0
+  roll: 0.0
+  x: 0.0 # unit: m
+  y: 0.0
+  z: 0.0
+ego_pose2_in_world_frame:
+  yaw: 0.0
+  pitch: 0.0
+  roll: 0.0
+  x: 0.0
+  y: 0.0
+  z: 0.0
+
+# target pose in ego frame 
+target_pose1_in_ego1_frame: 
+  yaw: 0.0
+  pitch: 0.0
+  roll: 0.0
+  x: 10.0
+  y: 5.0
+  z: 0.0
+target_pose2_in_ego2_frame: 
+  yaw: 0.0
+  pitch: 0.0
+  roll: 0.0
+  x: 10.0
+  y: 5.0
+  z: 0.0
+
+# target size
+target_size:
+  length: 4.0 #unit: m
+  width: 2.0
+  height: 2.0
+
+# laser config
+horizontal_angle_resolution: 0.4 # unit: deg
+
+# others
+delta_time_between_two_frame: 0.1 #unit: sec
+

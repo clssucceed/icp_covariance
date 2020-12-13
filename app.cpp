@@ -3,15 +3,19 @@
 #include <iostream>
 
 #include "color.h"
+#include "config/config.h"
 #include "data_generator.h"
+#include "icp_covariance.h"
 #include "pcl_alignment.h"
 #include "utils.h"
 #include "visualization.h"
-#include "icp_covariance.h"
 
 int main(int argc, char *argv[]) {
   std::cout << PCL_VERSION << std::endl;
   std::cout << "icp_covariance test" << std::endl;
+  auto config = icp_cov::Config::Instance();
+  auto yaml_node = config->yaml_node();
+  std::cout << yaml_node["horizontal_angle_resolution"].as<double>() << std::endl;
 
   // step 1: generate data
   // pcl

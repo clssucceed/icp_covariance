@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(icp_covariance)
+add_definitions(-std=c++11)
 find_package(Eigen3)
 find_package(OpenCV)
 find_package(PCL)
+find_package(yaml-cpp REQUIRED)
 
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 include_directories(${PCL_INCLUDE_DIRS})
@@ -17,6 +19,7 @@ add_executable(icp_covariance
   utils.cpp 
   visualization.cpp
   pcl_alignment.cpp
-  icp_covariance.cpp)
+  icp_covariance.cpp
+  config/config.cpp)
 
-target_link_libraries(icp_covariance Eigen3::Eigen ${OpenCV_LIBS} ${PCL_LIBRARIES})
+target_link_libraries(icp_covariance Eigen3::Eigen ${OpenCV_LIBS} ${PCL_LIBRARIES} yaml-cpp)

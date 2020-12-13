@@ -73,6 +73,24 @@ Eigen::Vector3d R2ypr(const Eigen::Matrix3d& R) {
 
   return ypr / M_PI * 180.0;
 }
+
+Eigen::Matrix3d ypr2R(const Eigen::Vector3d& ypr) {
+  double y = ypr(0) / 180.0 * M_PI;
+  double p = ypr(1) / 180.0 * M_PI;
+  double r = ypr(2) / 180.0 * M_PI;
+
+  Eigen::Matrix3d Rz;
+  Rz << cos(y), -sin(y), 0, sin(y), cos(y), 0, 0, 0, 1;
+
+  Eigen::Matrix3d Ry;
+  Ry << cos(p), 0., sin(p), 0., 1., 0., -sin(p), 0., cos(p);
+
+  Eigen::Matrix3d Rx;
+  Rx << 1., 0., 0., 0., cos(r), -sin(r), 0., sin(r), cos(r);
+
+  return Rz * Ry * Rx;
+}
+
 Eigen::Quaterniond DeltaQ(const Eigen::Vector3d& theta) {
   Eigen::Quaterniond dq;
   Eigen::Vector3d half_theta = theta * 0.5;

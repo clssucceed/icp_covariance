@@ -4,6 +4,9 @@
 * app: 主程序
 * 数据生成(DataGenerator): 单例
 * 可视化(Visualization): 单例
+* PclAlignment: 单例
+* IcpCovariance: 单例
+* Config: 单例. 使用yaml-cpp，使用方法详见https://blog.csdn.net/briblue/article/details/89515470
 * utils: 工具函数
 
 ## 实验结果

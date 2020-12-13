@@ -15,6 +15,7 @@ Eigen::Matrix3d SkewMatrix(const Eigen::Vector3d& v);
 Eigen::Affine3d TransformNoise(const double rotation_sigma,
                                const double translation_sigma);
 Eigen::Vector3d R2ypr(const Eigen::Matrix3d& R);
+Eigen::Matrix3d ypr2R(const Eigen::Vector3d& ypr);
 Eigen::Quaterniond DeltaQ(const Eigen::Vector3d& theta);
 Eigen::MatrixXd Covariance(const Eigen::MatrixXd& input);
 double AngleMod(double x);
