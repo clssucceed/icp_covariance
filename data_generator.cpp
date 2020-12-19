@@ -79,28 +79,146 @@ void DataGenerator::Generate2d() {
 }
 
 void DataGenerator::Generate3d() {
-  //   auto config = icp_cov::Config::Instance();
-  //   const doule horizontal_angle_resolution =
-  //       config->kLaserHorizontalAngleResolution;
-  //   const double vertical_angle_resolution =
-  //       config->kLaserVerticalAngleResolution;
-  //   const int laser_number = config->kLaserNumber;
-  //   const int horizontal_laser_index = config->kHorizontalLaserIndex;
-  //   assert(horizontal_angle_resolution > 1.0e-6);
-  //   assert(vertical_angle_resolution > 1.0e-6);
-  //   assert(laser_number > 0);
-  //   const int point_number_per_laser = 360 / horizontal_angle_resolution;
-  //   for (int hindex = 0; hindex < point_number_per_laser; ++hindex) {
-  //     double hangle = hindex * horizontal_angle_resolution;
-  //     for (int vindex = 0; vindex < laser_number; ++vindex) {
-  //       double vangle =
-  //           (vindex - horizontal_laser_index) * vertical_angle_resolution;
-  //       // generate one point (in ego frame) from hangle + vangle + ego_pose
-  //       +
-  //       // target_pose + target_size
+  GeneratePointsInEgoFrame3dVersion(ego_pose1_, target_pose1_,
+                                    pcl1_in_ego_frame_);
+  GeneratePointsInEgoFrame3dVersion(ego_pose2_, target_pose2_,
+                                    pcl2_in_ego_frame_);
+}
 
-  //     }
-  //   }
+void DataGenerator::GeneratePointsInEgoFrame3dVersion(
+    const Eigen::Affine3d& ego_pose, const Eigen::Affine3d& target_pose,
+    std::vector<Eigen::Vector3d>& pcl_in_ego_frame) {
+  auto config = icp_cov::Config::Instance();
+  // step 1: calculate target_center_pose_in_lidar_frame
+  const Eigen::Affine3d lidar_pose_in_ego_frame = config->kLidarPoseInEgoFrame;
+  const Eigen::Affine3d lidar_pose_in_world_frame =
+      ego_pose * lidar_pose_in_ego_frame;
+  const Eigen::Vector3d target_size = config->kTargetSize;
+  const Eigen::Vector3d target_center_in_target_frame(0.5 * target_size(0), 0,
+                                                      -0.5 * target_size(2));
+  // target pose is pose of rear wheel center
+  const Eigen::Affine3d target_center_pose = icp_cov::utils::RtToAffine3d(
+      target_pose.rotation(), target_pose * target_center_in_target_frame);
+  const Eigen::Affine3d target_center_pose_in_lidar_frame =
+      lidar_pose_in_world_frame.inverse() * target_center_pose;
+  // NOTE: all elements in step 2&3 are in lidar frame
+  // step 2: calculate visible planes of target
+  // step 2.1: find the anchor point (the closest point to lidar)
+  const std::vector<Eigen::Vector3d>
+      center_points_of_four_vertical_line_in_target_center_frame = {
+          Eigen::Vector3d(-0.5 * target_size(0), -0.5 * target_size(1), 0),
+          Eigen::Vector3d(0.5 * target_size(0), -0.5 * target_size(1), 0),
+          Eigen::Vector3d(0.5 * target_size(0), 0.5 * target_size(1), 0),
+          Eigen::Vector3d(-0.5 * target_size(0), 0.5 * target_size(1), 0)};
+  std::vector<Eigen::Vector3d>
+      center_points_of_four_vertical_line_in_lidar_frame;
+  icp_cov::utils::TransformPoints(
+      center_points_of_four_vertical_line_in_target_center_frame,
+      target_center_pose_in_lidar_frame,
+      center_points_of_four_vertical_line_in_lidar_frame);
+  int anchor_point_index = -1;
+  double min_distance = std::numeric_limits<double>::max();
+  for (int i = 0; i < center_points_of_four_vertical_line_in_lidar_frame.size();
+       ++i) {
+    const double distance =
+        center_points_of_four_vertical_line_in_lidar_frame.at(i).norm();
+    if (distance < min_distance) {
+      anchor_point_index = i;
+      min_distance = distance;
+    }
+  }
+  assert(anchor_point_index >= 0);
+  // step 2.2: generate planes from neighbouring three point of anchor point
+  std::vector<FiniteRectangle> visible_planes;
+  auto generate_plane_with_two_point =
+      [](const Eigen::Vector3d& point1, const Eigen::Vector3d& point2,
+         const Eigen::Affine3d& target_center_pose_in_lidar_frame,
+         const Eigen::Vector3d& target_size,
+         std::vector<FiniteRectangle>& visible_planes) {
+        const Eigen::Vector3d length_direction = point1 - point2;
+        const Eigen::Vector3d normalized_length_direction =
+            length_direction.normalized();
+        const double length = length_direction.norm();
+        assert(std::fabs(length - target_size(0)) < 1.0e-6);
+        const Eigen::Vector3d width_direction =
+            target_center_pose_in_lidar_frame * Eigen::Vector3d(0, 0, 1);
+        const Eigen::Vector3d normalized_width_direction =
+            width_direction.normalized();
+        const double width = target_size(2);
+        const Eigen::Vector3d center_point =
+            (point1 + point2) * 0.5;
+        const Eigen::Vector3d normal =
+            (icp_cov::utils::SkewMatrix(normalized_length_direction) *
+             normalized_width_direction)
+                .normalized();
+        visible_planes.emplace_back(
+            FiniteRectangle(center_point, normal, normalized_length_direction,
+                            length, normalized_width_direction, width));
+      };
+  generate_plane_with_two_point(
+      center_points_of_four_vertical_line_in_lidar_frame.at(anchor_point_index),
+      center_points_of_four_vertical_line_in_lidar_frame.at(
+          (anchor_point_index - 1 + 4) % 4),
+      target_center_pose_in_lidar_frame, target_size, visible_planes);
+  generate_plane_with_two_point(
+      center_points_of_four_vertical_line_in_lidar_frame.at(anchor_point_index),
+      center_points_of_four_vertical_line_in_lidar_frame.at(
+          (anchor_point_index + 1 + 4) % 4),
+      target_center_pose_in_lidar_frame, target_size, visible_planes);
+  // step 3: generate points from intersection of laser rays and visible planes
+  const double horizontal_angle_resolution =
+      config->kLaserHorizontalAngleResolution;
+  const double vertical_angle_resolution =
+      config->kLaserVerticalAngleResolution;
+  const int laser_number = config->kLaserNumber;
+  const int horizontal_laser_index = config->kHorizontalLaserIndex;
+  assert(horizontal_angle_resolution > 1.0e-6);
+  assert(vertical_angle_resolution > 1.0e-6);
+  assert(laser_number > 0);
+  const int point_number_per_laser = 360 / horizontal_angle_resolution;
+  static std::vector<Eigen::Vector3d> pcl_in_lidar_frame;
+  pcl_in_lidar_frame.clear();
+  for (int hindex = 0; hindex < point_number_per_laser; ++hindex) {
+    double hangle = hindex * horizontal_angle_resolution * config->kDegToRad;
+    for (int vindex = 0; vindex < laser_number; ++vindex) {
+      double vangle = (vindex - horizontal_laser_index) *
+                      vertical_angle_resolution * config->kDegToRad;
+      // generate one point (in ego frame) from intersection of laser ray and
+      // visible planes
+      Eigen::Vector3d generated_point;
+      if (GenerateOnePointFromHangleAndVangle(hangle, vangle, visible_planes,
+                                              generated_point)) {
+        pcl_in_lidar_frame.emplace_back(generated_point);
+      }
+    }
+  }
+  // step 4: transform points to ego frame
+  icp_cov::utils::TransformPoints(pcl_in_lidar_frame, lidar_pose_in_ego_frame,
+                                  pcl_in_ego_frame);
+}
+
+bool DataGenerator::GenerateOnePointFromHangleAndVangle(
+    const double hangle, const double vangle,
+    const std::vector<FiniteRectangle>& visible_planes,
+    Eigen::Vector3d& generated_point) {
+  bool success = false;
+  double min_d = std::numeric_limits<double>::max();
+  for (auto& visible_plane : visible_planes) {
+    // step 1: calculate d of generated_data
+    Eigen::Vector3d intersection_point;
+    const bool point_is_valid =
+        visible_plane.CalculateIntersectionPointWithOneRay(hangle, vangle,
+                                                           intersection_point);
+    if (!point_is_valid) continue;
+    // step 2: post process
+    success = true;
+    // select the closest intersection point as lidar observation
+    if (intersection_point.norm() < min_d) {
+      generated_point = intersection_point;
+      min_d = intersection_point.norm();
+    }
+  }
+  return success;
 }
 
 void DataGenerator::GeneratePoints(

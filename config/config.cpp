@@ -79,6 +79,16 @@ Config::Config() {
   std::cout << "laser_number: " << kLaserNumber << std::endl;
   kHorizontalLaserIndex = yaml_node_["horizontal_laser_index"].as<int>();
   std::cout << "horizontal_laser_index: " << kHorizontalLaserIndex << std::endl;
+  kLidarPoseInEgoFrame = RtToAffine3d(
+      ypr2R(Eigen::Vector3d(
+          yaml_node_["lidar_pose_in_ego_frame"]["yaw"].as<double>(),
+          yaml_node_["lidar_pose_in_ego_frame"]["pitch"].as<double>(),
+          yaml_node_["lidar_pose_in_ego_frame"]["roll"].as<double>())),
+      Eigen::Vector3d(yaml_node_["lidar_pose_in_ego_frame"]["x"].as<double>(),
+                      yaml_node_["lidar_pose_in_ego_frame"]["y"].as<double>(),
+                      yaml_node_["lidar_pose_in_ego_frame"]["z"].as<double>()));
+  std::cout << "lidar_pose_in_ego_frame: " << std::endl
+            << kLidarPoseInEgoFrame.matrix() << std::endl;
   kDeltaTimeBetweenTwoFrame =
       yaml_node_["delta_time_between_two_frame"].as<double>();
   std::cout << "delta_time_between_two_frame: " << kDeltaTimeBetweenTwoFrame

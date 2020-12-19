@@ -36,11 +36,18 @@ target_size:
   width: 2.0
   height: 2.0
 
-# laser config
+# lidar config
 horizontal_angle_resolution: 0.4 # unit: deg
 vertical_angle_resolution: 1 # unit : deg
 laser_number: 40
 horizontal_laser_index: 25
+lidar_pose_in_ego_frame:
+  yaw: 0.0 # unit: deg
+  pitch: 0.0
+  roll: 0.0
+  x: 0.0 # unit: m
+  y: 0.0
+  z: -2.3
 
 # others
 delta_time_between_two_frame: 0.1 #unit: sec

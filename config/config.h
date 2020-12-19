@@ -14,6 +14,10 @@ class Config {
   const YAML::Node& yaml_node() const { return yaml_node_; }
 
  public:
+  // const
+  static constexpr double kRadToDeg = 180.0 / M_PI;
+  static constexpr double kDegToRad = 1.0 / kRadToDeg;
+
   // frequently used parameters
   Eigen::Affine3d kEgoPose1InWorldFrame;
   Eigen::Affine3d kEgoPose2InWorldFrame;
@@ -24,7 +28,8 @@ class Config {
   double kLaserVerticalAngleResolution;    // unit: degree
   int kLaserNumber;
   int kHorizontalLaserIndex;
-  double kDeltaTimeBetweenTwoFrame;        // unit: sec
+  Eigen::Affine3d kLidarPoseInEgoFrame;
+  double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;
 
  private:
