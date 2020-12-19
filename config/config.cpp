@@ -62,6 +62,11 @@ Config::Config() {
           yaml_node_["target_pose2_in_ego2_frame"]["z"].as<double>()));
   std::cout << "target_pose2_in_ego2_frame: " << std::endl
             << kTargetPose2InEgo2Frame.matrix() << std::endl;
+  kTargetSize =
+      Eigen::Vector3d(yaml_node_["target_size"]["length"].as<double>(),
+                      yaml_node_["target_size"]["width"].as<double>(),
+                      yaml_node_["target_size"]["height"].as<double>());
+  std::cout << kTargetSize << std::endl;
   kLaserHorizontalAngleResolution =
       yaml_node_["horizontal_angle_resolution"].as<double>();
   std::cout << "horizontal_angle_resolution: "

@@ -9,6 +9,7 @@
 #include "pcl_alignment.h"
 #include "utils.h"
 #include "visualization.h"
+#include "config/config.h"
 
 namespace icp_cov {
 IcpCovariance* IcpCovariance::icp_covariance_ = nullptr;
@@ -94,11 +95,13 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     Eigen::Vector3d anchor_point1_transformed =
         icp_transform_est * anchor_point1;
     Eigen::Vector3d velocity =
-        (anchor_point1_transformed - anchor_point1) / 0.1;
+        (anchor_point1_transformed - anchor_point1) /
+        icp_cov::Config::Instance()->kDeltaTimeBetweenTwoFrame;
     velocitys.row(i) = velocity.transpose();
     vel_norms(i) = velocity.norm();
     vel_directions(i) = std::atan2(velocity(1), velocity(0)) * kRadToDeg;
-    yaw_rates(i) = ypr(0) / 0.1;
+    yaw_rates(i) =
+        ypr(0) / icp_cov::Config::Instance()->kDeltaTimeBetweenTwoFrame;
     std::cout << "vel: " << velocity(0) << ", " << velocity(1) << ", "
               << velocity.norm() << std::endl;
   }

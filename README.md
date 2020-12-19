@@ -39,6 +39,7 @@
   * 为什么估计的速度会存在较大bias
   * 尝试不同icp方案
   * 手写icp(相邻两帧同一个laser在目标车上扫到的点云属于同一个平面，符合点到线的约束．但是，存在一个前提，自车和目标车不存在颠簸)
+  * 时序仿真: 自车和目标车按照配置文件中设置好的运动模式运动（实现MotionGenerator类用于根据配置文件生成自车和目标车的时序位姿，并且提供获取各个时刻的位姿接口），DataGenerator根据MotionGenerator生成位姿继续生成lidar pcl，然后进行icp操作，最后将icp计算的速度可视化输出
 * 可视化(1d,2d,3d) ros visualization: rviz + PlotJuggler + Pangolin
 * 视觉仿真
   * 使用相同的生成数据X_{t-1}, X_t，T_init生成图像数据，并进行of_cov的计算

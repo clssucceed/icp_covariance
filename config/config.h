@@ -19,6 +19,7 @@ class Config {
   Eigen::Affine3d kEgoPose2InWorldFrame;
   Eigen::Affine3d kTargetPose1InEgo1Frame;
   Eigen::Affine3d kTargetPose2InEgo2Frame;
+  Eigen::Vector3d kTargetSize;
   double kLaserHorizontalAngleResolution;  // unit: degree
   double kDeltaTimeBetweenTwoFrame;        // unit: sec
 

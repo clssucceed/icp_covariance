@@ -1,6 +1,7 @@
 #include "data_generator.h"
 
 #include "color.h"
+#include "config/config.h"
 #include "utils.h"
 #include "visualization.h"
 
@@ -18,24 +19,18 @@ DataGenerator* DataGenerator::Instance() {
 void DataGenerator::Generate() {
   Reset();
   // step 1: set ego pose
-  ego_pose1_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
-                                            Eigen::Vector3d(0, 0, 0));
-  ego_pose2_ = icp_cov::utils::RtToAffine3d(Eigen::Matrix3d::Identity(),
-                                            Eigen::Vector3d(0, 0, 0));
+  auto config = icp_cov::Config::Instance();
+  ego_pose1_ = config->kEgoPose1InWorldFrame;
+  ego_pose2_ = config->kEgoPose2InWorldFrame;
 
   // step 2: set target pose
-  target_pose1_ = ego_pose1_ * icp_cov::utils::RtToAffine3d(
-                                   Eigen::Matrix3d::Identity(),
-                                   Eigen::Vector3d(kTargetXCoordinateInEgo,
-                                                   kTargetYCoordinateInEgo, 0));
-  target_pose2_ = ego_pose2_ * icp_cov::utils::RtToAffine3d(
-                                   Eigen::Matrix3d::Identity(),
-                                   Eigen::Vector3d(kTargetXCoordinateInEgo,
-                                                   kTargetYCoordinateInEgo, 0));
+  target_pose1_ = ego_pose1_ * config->kTargetPose1InEgo1Frame;
+  target_pose2_ = ego_pose2_ * config->kTargetPose2InEgo2Frame;
 
   // step 3: generate points
-  const Eigen::Vector3d target_size(4, 2, 0);
-  const double angle_resolution = 0.2;  // unit: degree
+  const Eigen::Vector3d target_size(config->kTargetSize);
+  const double angle_resolution =
+      config->kLaserHorizontalAngleResolution;  // unit: degree
   const bool output_points_in_world_frame = true;
   GeneratePoints(ego_pose1_, target_pose1_, target_size, angle_resolution,
                  pcl1_in_ego_frame_, pcl1_in_world_frame_);
