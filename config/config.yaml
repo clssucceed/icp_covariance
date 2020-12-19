@@ -38,7 +38,11 @@ target_size:
 
 # laser config
 horizontal_angle_resolution: 0.4 # unit: deg
+vertical_angle_resolution: 1 # unit : deg
+laser_number: 40
+horizontal_laser_index: 25
 
 # others
 delta_time_between_two_frame: 0.1 #unit: sec
+generate_3d_data: false
 

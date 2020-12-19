@@ -27,29 +27,28 @@ void DataGenerator::Generate() {
   target_pose1_ = ego_pose1_ * config->kTargetPose1InEgo1Frame;
   target_pose2_ = ego_pose2_ * config->kTargetPose2InEgo2Frame;
 
-  // step 3: generate points
-  const Eigen::Vector3d target_size(config->kTargetSize);
-  const double angle_resolution =
-      config->kLaserHorizontalAngleResolution;  // unit: degree
-  const bool output_points_in_world_frame = true;
-  GeneratePoints(ego_pose1_, target_pose1_, target_size, angle_resolution,
-                 pcl1_in_ego_frame_, pcl1_in_world_frame_);
-  GeneratePoints(ego_pose2_, target_pose2_, target_size, angle_resolution,
-                 pcl2_in_ego_frame_, pcl2_in_world_frame_);
+  // step 3: generate points in ego frame
+  if (icp_cov::Config::Instance()->kGenerate3d) {
+    Generate3d();
+  } else {
+    Generate2d();
+  }
 
-  // step 4: generate init pose
-  icp_transform_ = target_pose2_ * target_pose1_.inverse();
+  // step 4: Add noise for points in ego frame
+  AddNoiseToPoints(pcl1_in_ego_frame_, pcl1_in_ego_frame_with_noise_);
+  AddNoiseToPoints(pcl2_in_ego_frame_, pcl2_in_ego_frame_with_noise_);
 
-  // step 5: Add noise
-  AddNoiseToPoints(pcl1_in_ego_frame_, ego_pose1_,
-                   pcl1_in_ego_frame_with_noise_,
-                   pcl1_in_world_frame_with_noise_);
-  AddNoiseToPoints(pcl2_in_ego_frame_, ego_pose2_,
-                   pcl2_in_ego_frame_with_noise_,
-                   pcl2_in_world_frame_with_noise_);
-  AddNoiseToIcpTransform();
+  // step 5: transform points to world frame
+  icp_cov::utils::TransformPoints(pcl1_in_ego_frame_, ego_pose1_,
+                                  pcl1_in_world_frame_);
+  icp_cov::utils::TransformPoints(pcl2_in_ego_frame_, ego_pose2_,
+                                  pcl2_in_world_frame_);
+  icp_cov::utils::TransformPoints(pcl1_in_ego_frame_with_noise_, ego_pose1_,
+                                  pcl1_in_world_frame_with_noise_);
+  icp_cov::utils::TransformPoints(pcl2_in_ego_frame_with_noise_, ego_pose2_,
+                                  pcl2_in_world_frame_with_noise_);
 
-  // step 6: visualization
+  // step 6: transform points to ref frame for visualization
   ref_pose_ = ego_pose2_;
   icp_cov::utils::TransformPoints(pcl1_in_world_frame_, ref_pose_.inverse(),
                                   pcl1_in_ref_frame_);
@@ -61,13 +60,53 @@ void DataGenerator::Generate() {
   icp_cov::utils::TransformPoints(pcl2_in_world_frame_with_noise_,
                                   ref_pose_.inverse(),
                                   pcl2_in_ref_frame_with_noise_);
+
+  // step 7: generate init pose + add noise
+  icp_transform_ = target_pose2_ * target_pose1_.inverse();
+  AddNoiseToIcpTransform();
+}
+
+void DataGenerator::Generate2d() {
+  auto config = icp_cov::Config::Instance();
+  const Eigen::Vector3d target_size(config->kTargetSize);
+  const double angle_resolution =
+      config->kLaserHorizontalAngleResolution;  // unit: degree
+  //   const bool output_points_in_world_frame = true;
+  GeneratePoints(ego_pose1_, target_pose1_, target_size, angle_resolution,
+                 pcl1_in_ego_frame_);
+  GeneratePoints(ego_pose2_, target_pose2_, target_size, angle_resolution,
+                 pcl2_in_ego_frame_);
+}
+
+void DataGenerator::Generate3d() {
+  //   auto config = icp_cov::Config::Instance();
+  //   const doule horizontal_angle_resolution =
+  //       config->kLaserHorizontalAngleResolution;
+  //   const double vertical_angle_resolution =
+  //       config->kLaserVerticalAngleResolution;
+  //   const int laser_number = config->kLaserNumber;
+  //   const int horizontal_laser_index = config->kHorizontalLaserIndex;
+  //   assert(horizontal_angle_resolution > 1.0e-6);
+  //   assert(vertical_angle_resolution > 1.0e-6);
+  //   assert(laser_number > 0);
+  //   const int point_number_per_laser = 360 / horizontal_angle_resolution;
+  //   for (int hindex = 0; hindex < point_number_per_laser; ++hindex) {
+  //     double hangle = hindex * horizontal_angle_resolution;
+  //     for (int vindex = 0; vindex < laser_number; ++vindex) {
+  //       double vangle =
+  //           (vindex - horizontal_laser_index) * vertical_angle_resolution;
+  //       // generate one point (in ego frame) from hangle + vangle + ego_pose
+  //       +
+  //       // target_pose + target_size
+
+  //     }
+  //   }
 }
 
 void DataGenerator::GeneratePoints(
     const Eigen::Affine3d& ego_pose, const Eigen::Affine3d& target_pose,
     const Eigen::Vector3d& target_size, const double angle_resolution,
-    std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
-    std::vector<Eigen::Vector3d>& pcl_in_world_frame) {
+    std::vector<Eigen::Vector3d>& pcl_in_ego_frame) {
   // step 1: generate line segment endpoints
   // step 1.1: generate line segment endpoints in target frame
   const Eigen::Vector3d ego_position = ego_pose.translation();
@@ -119,14 +158,6 @@ void DataGenerator::GeneratePoints(
   std::copy(target_y_axis_laser_points_in_ego_frame.begin(),
             target_y_axis_laser_points_in_ego_frame.end(),
             std::back_inserter(pcl_in_ego_frame));
-
-  pcl_in_world_frame.clear();
-  pcl_in_world_frame.reserve(target_x_axis_laser_points_in_ego_frame.size() +
-                             target_y_axis_laser_points_in_ego_frame.size());
-  icp_cov::utils::TransformPoints(target_x_axis_laser_points_in_ego_frame,
-                                  ego_pose, pcl_in_world_frame);
-  icp_cov::utils::TransformPoints(target_y_axis_laser_points_in_ego_frame,
-                                  ego_pose, pcl_in_world_frame);
 }
 
 /**
@@ -168,20 +199,14 @@ void DataGenerator::GeneratePointsOnLineSegmentInEgoFrame(
 // laser ray), not multi-dimensional
 void DataGenerator::AddNoiseToPoints(
     const std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
-    const Eigen::Affine3d& ego_pose,
-    std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise,
-    std::vector<Eigen::Vector3d>& pcl_in_world_frame_with_noise) {
+    std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise) {
   pcl_in_ego_frame_with_noise.clear();
-  pcl_in_world_frame_with_noise.clear();
   pcl_in_ego_frame_with_noise.reserve(pcl_in_ego_frame.size());
-  pcl_in_world_frame_with_noise.reserve(pcl_in_ego_frame.size());
   constexpr double kNoiseSigma = 0.03;  // unit: m
   for (const auto& point : pcl_in_ego_frame) {
     pcl_in_ego_frame_with_noise.emplace_back(
         point + icp_cov::utils::PointNoise(kNoiseSigma));
   }
-  icp_cov::utils::TransformPoints(pcl_in_ego_frame_with_noise, ego_pose,
-                                  pcl_in_world_frame_with_noise);
 }
 
 void DataGenerator::AddNoiseToIcpTransform() {

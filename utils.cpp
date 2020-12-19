@@ -24,6 +24,8 @@ Eigen::Affine3d RtToAffine3d(const Eigen::Matrix3d& R,
 void TransformPoints(const std::vector<Eigen::Vector3d>& src_points,
                      const Eigen::Affine3d& Transform,
                      std::vector<Eigen::Vector3d>& dst_points) {
+  dst_points.clear();
+  dst_points.reserve(src_points.size());
   for (const auto& point : src_points) {
     dst_points.emplace_back(Transform * point);
   }

@@ -21,7 +21,11 @@ class Config {
   Eigen::Affine3d kTargetPose2InEgo2Frame;
   Eigen::Vector3d kTargetSize;
   double kLaserHorizontalAngleResolution;  // unit: degree
+  double kLaserVerticalAngleResolution;    // unit: degree
+  int kLaserNumber;
+  int kHorizontalLaserIndex;
   double kDeltaTimeBetweenTwoFrame;        // unit: sec
+  bool kGenerate3d;
 
  private:
   static Config* config_;

@@ -41,6 +41,7 @@ void Visualization::Show() {
       canvas_(cv::Range(0, canvas_.rows), cv::Range(0, canvas_.cols));
   const std::string window_name = "icp_cov";
   cv::imwrite(window_name + ".png", to_be_showed);
+  return;
   cv::namedWindow(window_name, cv::WINDOW_NORMAL);
   cv::imshow(window_name, to_be_showed);
   cv::waitKey(0);

@@ -63,21 +63,21 @@ class DataGenerator {
  private:
   DataGenerator() { Generate(); }
 
+  void Generate2d();
+  void Generate3d();
+
   void GeneratePoints(const Eigen::Affine3d& ego_pose,
                       const Eigen::Affine3d& target_pose,
                       const Eigen::Vector3d& target_size,
                       const double angle_resolution,
-                      std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
-                      std::vector<Eigen::Vector3d>& pcl_in_world_frame);
+                      std::vector<Eigen::Vector3d>& pcl_in_ego_frame);
   void GeneratePointsOnLineSegmentInEgoFrame(
       const Eigen::Vector3d& point1, const Eigen::Vector3d& point2,
       const double angle_resolution,
       std::vector<Eigen::Vector3d>& generated_points);
   void AddNoiseToPoints(
       const std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
-      const Eigen::Affine3d& ego_pose,
-      std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise,
-      std::vector<Eigen::Vector3d>& pcl_in_world_frame_with_noise);
+      std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise);
   void AddNoiseToIcpTransform();
   void Reset() {
     pcl1_in_ego_frame_.clear();
