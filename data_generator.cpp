@@ -178,9 +178,16 @@ void DataGenerator::GeneratePointsInEgoFrame3dVersion(
   const int point_number_per_laser = 360 / horizontal_angle_resolution;
   static std::vector<Eigen::Vector3d> pcl_in_lidar_frame;
   pcl_in_lidar_frame.clear();
-  for (int hindex = 0; hindex < point_number_per_laser; ++hindex) {
+  int hindex_begin = -1;
+  int hindex_end = -1;
+  int vindex_begin = -1;
+  int vindex_end = -1;
+  CalculateHIndexAndVIndexRange(target_center_pose_in_lidar_frame, target_size,
+                                hindex_begin, hindex_end, vindex_begin,
+                                vindex_end);
+  for (int hindex = hindex_begin; hindex < hindex_end; ++hindex) {
     double hangle = hindex * horizontal_angle_resolution * config->kDegToRad;
-    for (int vindex = 0; vindex < laser_number; ++vindex) {
+    for (int vindex = vindex_begin; vindex < vindex_end; ++vindex) {
       double vangle = (vindex - horizontal_laser_index) *
                       vertical_angle_resolution * config->kDegToRad;
       // generate one point (in ego frame) from intersection of laser ray and
@@ -195,6 +202,84 @@ void DataGenerator::GeneratePointsInEgoFrame3dVersion(
   // step 4: transform points to ego frame
   icp_cov::utils::TransformPoints(pcl_in_lidar_frame, lidar_pose_in_ego_frame,
                                   pcl_in_ego_frame);
+}
+
+void DataGenerator::CalculateHIndexAndVIndexRange(
+    const Eigen::Affine3d& target_center_pose_in_lidar_frame,
+    const Eigen::Vector3d& target_size, int& hindex_begin, int& hindex_end,
+    int& vindex_begin, int& vindex_end) {
+  // step 1: calculate eight corner points of target in lidar frame
+  const std::vector<Eigen::Vector3d>
+      eight_corner_points_in_target_center_frame = {
+          Eigen::Vector3d(-0.5 * target_size(0), -0.5 * target_size(1),
+                          0.5 * target_size(2)),
+          Eigen::Vector3d(0.5 * target_size(0), -0.5 * target_size(1),
+                          0.5 * target_size(2)),
+          Eigen::Vector3d(0.5 * target_size(0), 0.5 * target_size(1),
+                          0.5 * target_size(2)),
+          Eigen::Vector3d(-0.5 * target_size(0), 0.5 * target_size(1),
+                          0.5 * target_size(2)),
+          Eigen::Vector3d(-0.5 * target_size(0), -0.5 * target_size(1),
+                          -0.5 * target_size(2)),
+          Eigen::Vector3d(0.5 * target_size(0), -0.5 * target_size(1),
+                          -0.5 * target_size(2)),
+          Eigen::Vector3d(0.5 * target_size(0), 0.5 * target_size(1),
+                          -0.5 * target_size(2)),
+          Eigen::Vector3d(-0.5 * target_size(0), 0.5 * target_size(1),
+                          -0.5 * target_size(2)),
+      };
+  std::vector<Eigen::Vector3d> eight_corner_points_in_lidar_frame;
+  icp_cov::utils::TransformPoints(eight_corner_points_in_target_center_frame,
+                                  target_center_pose_in_lidar_frame,
+                                  eight_corner_points_in_lidar_frame);
+  // step 2: calculate hindex and vindex of eight corner points and then derive
+  // the index range
+  auto config = icp_cov::Config::Instance();
+  const int laser_number = config->kLaserNumber;
+  const int horizontal_laser_index = config->kHorizontalLaserIndex;
+  const double horizontal_angle_resolution =
+      config->kLaserHorizontalAngleResolution;
+  const double vertical_angle_resolution =
+      config->kLaserVerticalAngleResolution;
+  // step 2.0: set initial value for hindex_begin, hindex_end, vindex_begin,
+  // vindex_end
+  hindex_begin = 360 / horizontal_angle_resolution;
+  hindex_end = 0;
+  vindex_begin = laser_number;
+  vindex_end = 0;
+  for (const Eigen::Vector3d& corner_point :
+       eight_corner_points_in_lidar_frame) {
+    // step 2.1: calculate hangle and vangle
+    const Eigen::Vector3d normalized_corner_point = corner_point.normalized();
+    const double vangle = -std::asin(normalized_corner_point(2)) *
+                          icp_cov::Config::Instance()->kRadToDeg;
+    assert(vangle > -horizontal_laser_index * vertical_angle_resolution);
+    assert(vangle <
+           (laser_number - horizontal_laser_index) * vertical_angle_resolution);
+    double hangle =
+        std::atan2(normalized_corner_point(1), normalized_corner_point(0)) *
+        icp_cov::Config::Instance()->kRadToDeg;
+    hangle = hangle > 0 ? hangle : hangle + 360;
+    assert(hangle >= 0);
+    assert(hangle <= 360);
+    // step 2.2: calculate hindex and vindex
+    const double hindex = hangle / horizontal_angle_resolution;
+    const double vindex =
+        vangle / vertical_angle_resolution + horizontal_laser_index;
+    // step 2.3: calculate range
+    hindex_begin =
+        hindex_begin > std::floor(hindex) ? std::floor(hindex) : hindex_begin;
+    hindex_end =
+        hindex_end < std::ceil(hindex) ? std::ceil(hindex) : hindex_end;
+    vindex_begin =
+        vindex_begin > std::floor(vindex) ? std::floor(vindex) : vindex_begin;
+    vindex_end =
+        vindex_end < std::ceil(vindex) ? std::ceil(vindex) : vindex_end;
+  }
+  assert(hindex_begin >= 0 && hindex_begin < hindex_end &&
+         hindex_end <= 360 / horizontal_angle_resolution);
+  assert(vindex_begin >= 0 && vindex_begin < vindex_end &&
+         vindex_end <= laser_number);
 }
 
 bool DataGenerator::GenerateOnePointFromHangleAndVangle(

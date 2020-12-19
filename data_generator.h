@@ -150,6 +150,10 @@ class DataGenerator {
       const double hangle, const double vangle,
       const std::vector<FiniteRectangle>& visible_planes,
       Eigen::Vector3d& generated_point);
+  void CalculateHIndexAndVIndexRange(
+      const Eigen::Affine3d& target_center_pose_in_lidar_frame,
+      const Eigen::Vector3d& target_size, int& hindex_begin, int& hindex_end,
+      int& vindex_begin, int& vindex_end);
   void AddNoiseToPoints(
       const std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
       std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise);
