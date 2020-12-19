@@ -116,7 +116,7 @@ class DataGenerator {
       bool condition3 =
           std::fabs(normalized_width_direction_.dot(point - center_point_)) <
           0.5 * width_;
-      return condition1 && condition2;
+      return condition1 && condition2 & condition3;
     }
 
    private:

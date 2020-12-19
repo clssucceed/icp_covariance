@@ -190,8 +190,7 @@ void DataGenerator::GeneratePointsInEgoFrame3dVersion(
     for (int vindex = vindex_begin; vindex < vindex_end; ++vindex) {
       double vangle = (vindex - horizontal_laser_index) *
                       vertical_angle_resolution * config->kDegToRad;
-      // generate one point (in ego frame) from intersection of laser ray and
-      // visible planes
+      // generate one point from intersection of laser ray and visible plane
       Eigen::Vector3d generated_point;
       if (GenerateOnePointFromHangleAndVangle(hangle, vangle, visible_planes,
                                               generated_point)) {
@@ -289,7 +288,7 @@ bool DataGenerator::GenerateOnePointFromHangleAndVangle(
   bool success = false;
   double min_d = std::numeric_limits<double>::max();
   for (auto& visible_plane : visible_planes) {
-    // step 1: calculate d of generated_data
+    // step 1: calculate d of generated_point
     Eigen::Vector3d intersection_point;
     const bool point_is_valid =
         visible_plane.CalculateIntersectionPointWithOneRay(hangle, vangle,
