@@ -51,5 +51,5 @@ lidar_pose_in_ego_frame:
 
 # others
 delta_time_between_two_frame: 0.1 #unit: sec
-generate_3d_data: false
+generate_3d_data: true
 

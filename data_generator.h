@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Dense>
+#include <iostream>
 #include <vector>
 
 namespace icp_cov {
@@ -95,10 +96,10 @@ class DataGenerator {
       const Eigen::Vector3d normalized_intersection_point(
           std::cos(vangle) * std::cos(hangle),
           std::cos(vangle) * std::sin(hangle), -sin(vangle));
-      const double d = center_point_.dot(normal_) /
-                       normalized_intersection_point.dot(normal_);
-      assert(std::isnan(d) == false);
-      assert(d > 1.0e-6);
+      const double temp = normalized_intersection_point.dot(normal_);
+      if (std::fabs(temp) < 1.0e-6) return false;
+      double d = center_point_.dot(normal_) / temp;
+      d = d > 0 ? d : -d;
       intersection_point = d * normalized_intersection_point;
       return PointIsInFiniteRectangle(intersection_point);
     }
