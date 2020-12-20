@@ -5,11 +5,11 @@
 #include <iostream>
 
 #include "color.h"
+#include "config/config.h"
 #include "data_generator.h"
 #include "pcl_alignment.h"
 #include "utils.h"
 #include "visualization.h"
-#include "config/config.h"
 
 namespace icp_cov {
 IcpCovariance* IcpCovariance::icp_covariance_ = nullptr;
@@ -63,6 +63,8 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     pcl_alignment->set_icp_transform_init(icp_transform_init);
     pcl_alignment->Align();
     Eigen::Affine3d icp_transform_est = pcl_alignment->icp_transform_est();
+    // icp_transform_est = icp_cov::utils::RtToAffine3d(
+    //     icp_transform_gt.rotation(), icp_transform_est.translation());
     Eigen::Vector3d ypr = icp_cov::utils::R2ypr(icp_transform_est.rotation());
     Eigen::Vector3d xyz = icp_transform_est.translation();
     if (ypr.norm() > 90) {
@@ -91,7 +93,8 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     yprxyz.tail(3) = xyz;
     yprxyzs.row(i) = yprxyz.transpose();
     // step 4: calc vel and save
-    Eigen::Vector3d anchor_point1 = data_generator->target_pose1().translation();
+    Eigen::Vector3d anchor_point1 =
+        data_generator->target_pose1().translation();
     Eigen::Vector3d anchor_point1_transformed =
         icp_transform_est * anchor_point1;
     Eigen::Vector3d velocity =
