@@ -63,7 +63,6 @@ void ImageDataGenerator::GenerateTargetPointsInTargetFrame() {
 
   // step 2.2: get points on visible planes
   // TODO(clssucceed@gmail.com):
-  // 0. 将新封装的生成面的函数在data_generator中测试一下
   // 1. 将该逻辑加到FinitePlane中
   // 2.
   // 需要仔细分析下只看到一个面的情况(即如何识别出返回的两个面中哪一个面是不可见的)
