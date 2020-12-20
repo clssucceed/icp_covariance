@@ -49,6 +49,20 @@ lidar_pose_in_ego_frame:
   y: 0.0
   z: -2.3
 
+# camera config  
+camera_pose_in_ego_frame:
+  yaw: 90.0 # unit: deg
+  pitch: 0.0
+  roll: 90.0
+  x: 0.0 # unit: m
+  y: 0.0
+  z: -2.0
+camera_intrinsic_matrix:
+  fx: 700.0
+  fy: 700.0
+  cx: 640.0
+  cy: 360.0  
+
 # others
 delta_time_between_two_frame: 0.1 #unit: sec
 generate_3d_data: true

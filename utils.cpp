@@ -31,13 +31,22 @@ void TransformPoints(const std::vector<Eigen::Vector3d>& src_points,
   }
 }
 
-Eigen::Vector3d PointNoise(const double sigma) {
+Eigen::Vector3d PointNoise2d(const double sigma) {
   // 产生随机数引擎，采用time作为种子，以确保每次运行程序都会得到不同的结果
   static std::default_random_engine e(std::time(0));
   // 产生正态分布对象
   static std::normal_distribution<double> n(0, sigma);
   // 生成point noise
   return Eigen::Vector3d(n(e), n(e), 0);
+}
+
+Eigen::Vector3d PointNoise3d(const double sigma) {
+  // 产生随机数引擎，采用time作为种子，以确保每次运行程序都会得到不同的结果
+  static std::default_random_engine e(std::time(0));
+  // 产生正态分布对象
+  static std::normal_distribution<double> n(0, sigma);
+  // 生成point noise
+  return Eigen::Vector3d(n(e), n(e), n(e));
 }
 
 Eigen::Matrix3d SkewMatrix(const Eigen::Vector3d& v) {

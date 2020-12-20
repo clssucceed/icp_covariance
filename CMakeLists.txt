@@ -16,6 +16,7 @@ message("pcl library dirs: ${PCL_LIBRARY_DIRS}")
 add_executable(icp_covariance 
   app.cpp 
   data_generator.cpp 
+  image_data_generator.cpp
   utils.cpp 
   visualization.cpp
   pcl_alignment.cpp

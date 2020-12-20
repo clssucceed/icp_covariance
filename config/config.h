@@ -19,16 +19,23 @@ class Config {
   static constexpr double kDegToRad = 1.0 / kRadToDeg;
 
   // frequently used parameters
+  // ego config
   Eigen::Affine3d kEgoPose1InWorldFrame;
   Eigen::Affine3d kEgoPose2InWorldFrame;
+  // target config
   Eigen::Affine3d kTargetPose1InEgo1Frame;
   Eigen::Affine3d kTargetPose2InEgo2Frame;
   Eigen::Vector3d kTargetSize;
+  // lidar config
   double kLaserHorizontalAngleResolution;  // unit: degree
   double kLaserVerticalAngleResolution;    // unit: degree
   int kLaserNumber;
   int kHorizontalLaserIndex;
   Eigen::Affine3d kLidarPoseInEgoFrame;
+  // camera config
+  Eigen::Affine3d kCameraPoseInEgoFrame;
+  Eigen::Matrix3d kCameraIntrinsicMatrix;
+  // others
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;
 

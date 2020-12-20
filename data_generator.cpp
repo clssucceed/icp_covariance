@@ -408,7 +408,7 @@ void DataGenerator::AddNoiseToPoints(
   constexpr double kNoiseSigma = 0.03;  // unit: m
   for (const auto& point : pcl_in_ego_frame) {
     pcl_in_ego_frame_with_noise.emplace_back(
-        point + icp_cov::utils::PointNoise(kNoiseSigma));
+        point + icp_cov::utils::PointNoise2d(kNoiseSigma));
   }
 }
 
