@@ -112,6 +112,10 @@ Config::Config() {
       yaml_node_["camera_intrinsic_matrix"]["cy"].as<double>(), 0, 0, 1;
   std::cout << "camera_intrinsic_matrix: " << std::endl
             << kCameraIntrinsicMatrix << std::endl;
+  kImageWidth = yaml_node_["image_width"].as<int>();
+  std::cout << "image_width: " << kImageWidth << std::endl;
+  kImageHeight = yaml_node_["image_height"].as<int>();
+  std::cout << "image_height: " << kImageHeight << std::endl;
 
   // others
   kDeltaTimeBetweenTwoFrame =

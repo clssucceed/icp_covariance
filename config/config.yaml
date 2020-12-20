@@ -14,7 +14,7 @@ ego_pose2_in_world_frame:
   y: 0.0
   z: 0.0
 
-# target pose in ego frame 
+# target pose in ego frame (rear wheel center) 
 target_pose1_in_ego1_frame: 
   yaw: 0.0
   pitch: 0.0
@@ -62,6 +62,8 @@ camera_intrinsic_matrix:
   fy: 700.0
   cx: 640.0
   cy: 360.0  
+image_width: 1280
+image_height: 720  
 
 # others
 delta_time_between_two_frame: 0.1 #unit: sec

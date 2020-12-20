@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <vector>
+#include "finite_rectangle.h"
 
 namespace icp_cov {
 namespace utils {
@@ -23,5 +24,10 @@ double AngleMod(double x);
 void PrintPoints(const std::vector<Eigen::Vector3d>& points,
                  const std::string& points_name);
 void DebugThisSimulation();
+void CalculateVisiblePlanesOfTargetToSensor(
+    const Eigen::Affine3d& ego_pose, const Eigen::Affine3d& target_pose,
+    const Eigen::Affine3d& sensor_pose_in_ego_frame,
+    const Eigen::Vector3d& target_size,
+    std::vector<FiniteRectangle>& visible_planes);
 }  // namespace utils
 }  // namespace icp_cov

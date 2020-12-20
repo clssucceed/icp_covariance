@@ -35,6 +35,8 @@ class Config {
   // camera config
   Eigen::Affine3d kCameraPoseInEgoFrame;
   Eigen::Matrix3d kCameraIntrinsicMatrix;
+  int kImageWidth;
+  int kImageHeight;
   // others
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;

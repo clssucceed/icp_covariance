@@ -183,5 +183,89 @@ void DebugThisSimulation() {
   visualization->Save(image_name);
   pcl_alignment->Debug();
 }
+
+void CalculateVisiblePlanesOfTargetToSensor(
+    const Eigen::Affine3d& ego_pose, const Eigen::Affine3d& target_pose,
+    const Eigen::Affine3d& sensor_pose_in_ego_frame,
+    const Eigen::Vector3d& target_size,
+    std::vector<FiniteRectangle>& visible_planes) {
+  // step 1: calculate target_center_pose_in_sensor_frame
+  const Eigen::Affine3d sensor_pose_in_world_frame =
+      ego_pose * sensor_pose_in_ego_frame;
+  const Eigen::Vector3d target_center_in_target_frame(0.5 * target_size(0), 0,
+                                                      -0.5 * target_size(2));
+  // target pose is pose of rear wheel center
+  const Eigen::Affine3d target_center_pose = icp_cov::utils::RtToAffine3d(
+      target_pose.rotation(), target_pose * target_center_in_target_frame);
+  const Eigen::Affine3d target_center_pose_in_sensor_frame =
+      sensor_pose_in_world_frame.inverse() * target_center_pose;
+  // NOTE: all elements in step 2&3 are in sensor frame
+  // step 2: calculate visible planes of target
+  // step 2.1: find the anchor point (the closest point to sensor)
+  const std::vector<Eigen::Vector3d>
+      center_points_of_four_vertical_line_in_target_center_frame = {
+          Eigen::Vector3d(-0.5 * target_size(0), -0.5 * target_size(1), 0),
+          Eigen::Vector3d(0.5 * target_size(0), -0.5 * target_size(1), 0),
+          Eigen::Vector3d(0.5 * target_size(0), 0.5 * target_size(1), 0),
+          Eigen::Vector3d(-0.5 * target_size(0), 0.5 * target_size(1), 0)};
+  std::vector<Eigen::Vector3d>
+      center_points_of_four_vertical_line_in_sensor_frame;
+  icp_cov::utils::TransformPoints(
+      center_points_of_four_vertical_line_in_target_center_frame,
+      target_center_pose_in_sensor_frame,
+      center_points_of_four_vertical_line_in_sensor_frame);
+  int anchor_point_index = -1;
+  double min_distance = std::numeric_limits<double>::max();
+  for (int i = 0;
+       i < center_points_of_four_vertical_line_in_sensor_frame.size(); ++i) {
+    const double distance =
+        center_points_of_four_vertical_line_in_sensor_frame.at(i).norm();
+    if (distance < min_distance) {
+      anchor_point_index = i;
+      min_distance = distance;
+    }
+  }
+  assert(anchor_point_index >= 0);
+  // step 2.2: generate planes from neighbouring three point of anchor point
+  auto generate_plane_with_two_point =
+      [](const Eigen::Vector3d& point1, const Eigen::Vector3d& point2,
+         const Eigen::Affine3d& target_center_pose_in_sensor_frame,
+         const Eigen::Vector3d& target_size,
+         std::vector<FiniteRectangle>& visible_planes) {
+        const Eigen::Vector3d length_direction = point1 - point2;
+        const Eigen::Vector3d normalized_length_direction =
+            length_direction.normalized();
+        const double length = length_direction.norm();
+        assert(std::fabs(length - target_size(0)) < 1.0e-6 ||
+               std::fabs(length - target_size(1)) < 1.0e-6);
+        const Eigen::Vector3d width_direction =
+            target_center_pose_in_sensor_frame.rotation() *
+            Eigen::Vector3d(0, 0, 1);
+        const Eigen::Vector3d normalized_width_direction =
+            width_direction.normalized();
+        const double width = target_size(2);
+        const Eigen::Vector3d center_point = (point1 + point2) * 0.5;
+        const Eigen::Vector3d normal =
+            (icp_cov::utils::SkewMatrix(normalized_length_direction) *
+             normalized_width_direction)
+                .normalized();
+        visible_planes.emplace_back(
+            FiniteRectangle(center_point, normal, normalized_length_direction,
+                            length, normalized_width_direction, width));
+      };
+  visible_planes.clear();
+  generate_plane_with_two_point(
+      center_points_of_four_vertical_line_in_sensor_frame.at(
+          anchor_point_index),
+      center_points_of_four_vertical_line_in_sensor_frame.at(
+          (anchor_point_index - 1 + 4) % 4),
+      target_center_pose_in_sensor_frame, target_size, visible_planes);
+  generate_plane_with_two_point(
+      center_points_of_four_vertical_line_in_sensor_frame.at(
+          anchor_point_index),
+      center_points_of_four_vertical_line_in_sensor_frame.at(
+          (anchor_point_index + 1 + 4) % 4),
+      target_center_pose_in_sensor_frame, target_size, visible_planes);
+}
 }  // namespace utils
 }  // namespace icp_cov
