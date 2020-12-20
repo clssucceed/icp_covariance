@@ -43,6 +43,7 @@ Eigen::Vector3d PointNoise(const double sigma) {
 Eigen::Matrix3d SkewMatrix(const Eigen::Vector3d& v) {
   Eigen::Matrix3d skew_matrix;
   skew_matrix << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
+  return skew_matrix;
 }
 
 Eigen::Affine3d TransformNoise(const double rotation_sigma,

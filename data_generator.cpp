@@ -142,7 +142,8 @@ void DataGenerator::GeneratePointsInEgoFrame3dVersion(
         assert(std::fabs(length - target_size(0)) < 1.0e-6 ||
                std::fabs(length - target_size(1)) < 1.0e-6);
         const Eigen::Vector3d width_direction =
-            target_center_pose_in_lidar_frame * Eigen::Vector3d(0, 0, 1);
+            target_center_pose_in_lidar_frame.rotation() *
+            Eigen::Vector3d(0, 0, 1);
         const Eigen::Vector3d normalized_width_direction =
             width_direction.normalized();
         const double width = target_size(2);
