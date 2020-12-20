@@ -17,6 +17,7 @@ add_executable(icp_covariance
   app.cpp 
   data_generator.cpp 
   image_data_generator.cpp
+  finite_rectangle.cpp
   utils.cpp 
   visualization.cpp
   pcl_alignment.cpp
