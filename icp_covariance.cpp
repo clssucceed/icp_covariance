@@ -91,7 +91,7 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     yprxyz.tail(3) = xyz;
     yprxyzs.row(i) = yprxyz.transpose();
     // step 4: calc vel and save
-    Eigen::Vector3d anchor_point1 = data_generator->ego_pose1().translation();
+    Eigen::Vector3d anchor_point1 = data_generator->target_pose1().translation();
     Eigen::Vector3d anchor_point1_transformed =
         icp_transform_est * anchor_point1;
     Eigen::Vector3d velocity =
