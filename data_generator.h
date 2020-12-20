@@ -104,6 +104,18 @@ class DataGenerator {
       return PointIsInFiniteRectangle(intersection_point);
     }
 
+   public:
+    void Debug() const {
+      std::cout << "center_point_: " << center_point_.transpose() << std::endl;
+      std::cout << "normal_: " << normal_.transpose() << std::endl;
+      std::cout << "normalized_length_direction_: "
+                << normalized_length_direction_.transpose() << std::endl;
+      std::cout << "normalized_width_direction_: "
+                << normalized_width_direction_.transpose() << std::endl;
+      std::cout << "length_: " << length_ << std::endl;
+      std::cout << "width_: " << width_ << std::endl;
+    }
+
    private:
     bool PointIsInFiniteRectangle(const Eigen::Vector3d& point) const {
       // if ProjectToNormal(X - center_point) == 0 &&
