@@ -34,6 +34,7 @@ class IcpCovariance {
   CovMatrix vel_cov_from_monte_carlo_;
   CovMatrix vel_norm_cov_from_monte_carlo_;
   CovMatrix vel_direction_cov_from_monte_carlo_;
+  CovMatrix icp_fitness_score_cov_from_monte_carlo_;
   CovMatrix yaw_rate_cov_from_monte_carlo_;
 };
 }  // namespace icp_cov
