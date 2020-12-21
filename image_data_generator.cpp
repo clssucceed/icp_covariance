@@ -38,7 +38,9 @@ void ImageDataGenerator::Generate() {
 void ImageDataGenerator::GenerateImageData() {
   // step 1: generate target_points_in_target_frame_gt_ in frame 1
   GenerateTargetPointsInTargetFrame();
-  // step 2: project target points to obtain image points in both camera
+  // NOTE: Assuming if points are visible in frame 1, then they will be visible
+  // in frame 2 step 2: project target points to obtain image points in both
+  // camera
   ProjectTargetPointsToCameras();
 }
 
@@ -180,10 +182,12 @@ void ImageDataGenerator::Visualization() const {
   cv::Mat canvas2 = cv::Mat::zeros(image_height, image_width, CV_8UC3);
   // step 2: draw points to canvas
   icp_cov::utils::DrawPointsToImage(image_points1_gt_, kColorGreen, canvas1);
-  icp_cov::utils::DrawPointsToImage(image_points1_with_noise_, kColorRed, canvas1);
+  icp_cov::utils::DrawPointsToImage(image_points1_with_noise_, kColorRed,
+                                    canvas1);
   cv::imwrite("image_data1.png", canvas1);
   icp_cov::utils::DrawPointsToImage(image_points2_gt_, kColorGreen, canvas2);
-  icp_cov::utils::DrawPointsToImage(image_points2_with_noise_, kColorRed, canvas2);
+  icp_cov::utils::DrawPointsToImage(image_points2_with_noise_, kColorRed,
+                                    canvas2);
   cv::imwrite("image_data2.png", canvas2);
   return;
   cv::imshow("image_data1", canvas1);

@@ -154,10 +154,10 @@ bool FiniteRectangle::PointIsInFiniteRectangle(
   bool condition1 = std::fabs(normal_.dot(point - center_point_)) < 1.0e-6;
   bool condition2 =
       std::fabs(normalized_length_direction_.dot(point - center_point_)) <
-      0.5 * length_;
+      0.5 * length_ + 1.0e-6;
   bool condition3 =
       std::fabs(normalized_width_direction_.dot(point - center_point_)) <
-      0.5 * width_;
+      0.5 * width_ + 1.0e-6;
   return condition1 && condition2 & condition3;
 }
 }  // namespace icp_cov
