@@ -15,11 +15,6 @@ int main(int argc, char *argv[]) {
   std::cout << PCL_VERSION << std::endl;
   std::cout << "icp_covariance test" << std::endl;
 
-  auto image_data_generator_ = icp_cov::ImageDataGenerator::Instance();
-  image_data_generator_->Visualization();
-
-  return 0;
-
   // step 1: generate data
   // pcl
   auto data_generator = icp_cov::DataGenerator::Instance();
