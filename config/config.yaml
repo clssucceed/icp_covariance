@@ -36,6 +36,9 @@ target_size:
   width: 2.0
   height: 2.0
 
+# other target info
+cell_size_on_target: 0.2 # unit: m
+
 # lidar config
 horizontal_angle_resolution: 0.4 # unit: deg
 vertical_angle_resolution: 1 # unit : deg

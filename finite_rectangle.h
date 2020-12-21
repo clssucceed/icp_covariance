@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <iostream>
+#include <vector>
 
 namespace icp_cov {
 class FiniteRectangle {
@@ -20,10 +21,27 @@ class FiniteRectangle {
     assert(normal_.norm() == 1.0);
     assert(normalized_length_direction_.norm() == 1.0);
     assert(normalized_width_direction_.norm() == 1.0);
+    Eigen::Vector3d point0 = center_point_ -
+                             0.5 * length_ * normalized_length_direction_ -
+                             0.5 * width_ * normalized_width_direction_;
+    Eigen::Vector3d point1 = center_point_ +
+                             0.5 * length_ * normalized_length_direction_ -
+                             0.5 * width_ * normalized_width_direction_;
+    Eigen::Vector3d point2 = center_point_ +
+                             0.5 * length_ * normalized_length_direction_ +
+                             0.5 * width_ * normalized_width_direction_;
+    Eigen::Vector3d point3 = center_point_ -
+                             0.5 * length_ * normalized_length_direction_ +
+                             0.5 * width_ * normalized_width_direction_;
+    four_corner_points_.clear();
+    four_corner_points_.emplace_back(point0);
+    four_corner_points_.emplace_back(point1);
+    four_corner_points_.emplace_back(point2);
+    four_corner_points_.emplace_back(point3);
   }
   FiniteRectangle() = delete;
   bool CalculateIntersectionPointWithOneRay(
-      const double hangle, const double vangle,
+      const Eigen::Vector3d& direction,
       Eigen::Vector3d& intersection_point) const {
     // Assume d is distance between sensor origin and generated_point,
     // then generated_point is
@@ -34,9 +52,8 @@ class FiniteRectangle {
     // d = center_point_of_plane^T * normal_of_plane /
     // (cos(vangle)*cos(hangle), cos(vangle)sin(hangle), -sin(hangle))^T *
     // normal_of_plane
-    const Eigen::Vector3d normalized_intersection_point(
-        std::cos(vangle) * std::cos(hangle),
-        std::cos(vangle) * std::sin(hangle), -sin(vangle));
+    const Eigen::Vector3d normalized_intersection_point =
+        direction.normalized();
     const double temp = normalized_intersection_point.dot(normal_);
     if (std::fabs(temp) < 1.0e-6) return false;
     double d = center_point_.dot(normal_) / temp;
@@ -44,6 +61,18 @@ class FiniteRectangle {
     intersection_point = d * normalized_intersection_point;
     return PointIsInFiniteRectangle(intersection_point);
   }
+  bool CalculateIntersectionPointWithOneRay(
+      const double hangle, const double vangle,
+      Eigen::Vector3d& intersection_point) const {
+    const Eigen::Vector3d direction(std::cos(vangle) * std::cos(hangle),
+                                    std::cos(vangle) * std::sin(hangle),
+                                    -sin(vangle));
+    return CalculateIntersectionPointWithOneRay(direction, intersection_point);
+  }
+  bool IsOccludedBy(const FiniteRectangle& other) const;
+  std::vector<Eigen::Vector3d> points_on_plane() const {
+    return points_on_plane_;
+  };
 
  public:
   void Debug() const {
@@ -71,13 +100,18 @@ class FiniteRectangle {
         0.5 * width_;
     return condition1 && condition2 & condition3;
   }
+  bool PointIsOccluded(const Eigen::Vector3d& point) const;
+  void GeneratePointsOnPlane();
 
  private:
+  // all in sensor frame
   const Eigen::Vector3d center_point_;
   const Eigen::Vector3d normal_;
   const Eigen::Vector3d normalized_length_direction_;
   const Eigen::Vector3d normalized_width_direction_;
   const double length_;
   const double width_;
+  std::vector<Eigen::Vector3d> four_corner_points_;
+  std::vector<Eigen::Vector3d> points_on_plane_;
 };
 }  // namespace icp_cov

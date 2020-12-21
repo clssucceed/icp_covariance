@@ -26,6 +26,7 @@ class Config {
   Eigen::Affine3d kTargetPose1InEgo1Frame;
   Eigen::Affine3d kTargetPose2InEgo2Frame;
   Eigen::Vector3d kTargetSize;
+  double kCellSizeOnTarget;
   // lidar config
   double kLaserHorizontalAngleResolution;  // unit: degree
   double kLaserVerticalAngleResolution;    // unit: degree

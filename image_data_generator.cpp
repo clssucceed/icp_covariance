@@ -47,29 +47,39 @@ void ImageDataGenerator::GenerateTargetPointsInTargetFrame() {
   const Eigen::Affine3d camera_pose_in_ego_frame =
       config->kCameraPoseInEgoFrame;
   const Eigen::Vector3d target_size = config->kTargetSize;
-  const Eigen::Affine3d target_center_pose_in_target_frame =
-      icp_cov::utils::RtToAffine3d(
-          Eigen::Matrix3d::Identity(),
-          Eigen::Vector3d(0.5 * target_size(0), 0, -0.5 * target_size(2)));
+  const Eigen::Affine3d sensor_pose_in_target_frame =
+      target_pose.inverse() * ego_pose * camera_pose_in_ego_frame;
 
-  // step 2: get points in target center frame
-  static std::vector<Eigen::Vector3d> target_points_in_target_center_frame;
-  target_points_in_target_center_frame.clear();
-  // step 2.1: get visible planes
+  // step 2: get points in sensor frame
+  // step 2.1: get visible planes(represented in sensor frame)
   std::vector<FiniteRectangle> visible_planes;
   icp_cov::utils::CalculateVisiblePlanesOfTargetToSensor(
       ego_pose, target_pose, camera_pose_in_ego_frame, target_size,
       visible_planes);
 
   // step 2.2: get points on visible planes
-  // TODO(clssucceed@gmail.com):
-  // 1. 将该逻辑加到FinitePlane中
-  // 2.
-  // 需要仔细分析下只看到一个面的情况(即如何识别出返回的两个面中哪一个面是不可见的)
+  assert(visible_planes.size() == 2);
+  static std::vector<Eigen::Vector3d> target_points_in_sensor_frame;
+  target_points_in_sensor_frame.clear();
+  // only use points in non-occluded plane
+  if (!visible_planes.at(0).IsOccludedBy(visible_planes.at(1))) {
+    auto points_on_plane_in_sensor_frame =
+        visible_planes.at(0).points_on_plane();
+    std::copy(points_on_plane_in_sensor_frame.begin(),
+              points_on_plane_in_sensor_frame.end(),
+              std::back_inserter(target_points_in_sensor_frame));
+  }
+  if (!visible_planes.at(1).IsOccludedBy(visible_planes.at(0))) {
+    auto points_on_plane_in_sensor_frame =
+        visible_planes.at(1).points_on_plane();
+    std::copy(points_on_plane_in_sensor_frame.begin(),
+              points_on_plane_in_sensor_frame.end(),
+              std::back_inserter(target_points_in_sensor_frame));
+  }
 
   // step 3: transform points to target frame
-  icp_cov::utils::TransformPoints(target_points_in_target_center_frame,
-                                  target_center_pose_in_target_frame,
+  icp_cov::utils::TransformPoints(target_points_in_sensor_frame,
+                                  sensor_pose_in_target_frame,
                                   target_points_in_target_frame_gt_);
 }
 

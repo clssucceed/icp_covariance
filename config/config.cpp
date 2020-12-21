@@ -69,6 +69,8 @@ Config::Config() {
                       yaml_node_["target_size"]["width"].as<double>(),
                       yaml_node_["target_size"]["height"].as<double>());
   std::cout << "target_size: " << kTargetSize.transpose() << std::endl;
+  kCellSizeOnTarget = yaml_node_["cell_size_on_target"].as<double>();
+  std::cout << "cell_size_on_target: " << kCellSizeOnTarget << std::endl;
   // laser config
   kLaserHorizontalAngleResolution =
       yaml_node_["horizontal_angle_resolution"].as<double>();
