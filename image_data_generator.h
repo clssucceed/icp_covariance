@@ -9,6 +9,7 @@ class ImageDataGenerator {
 
  public:
   void Generate();
+  void Visualization() const;
 
  public:
   // gt

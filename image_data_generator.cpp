@@ -1,5 +1,8 @@
 #include "image_data_generator.h"
 
+#include <opencv2/opencv.hpp>
+
+#include "color.h"
 #include "config/config.h"
 #include "utils.h"
 
@@ -129,7 +132,7 @@ void ImageDataGenerator::ProjectTargetPointsToCamera(
     assert(image_point(0) < image_width);
     assert(image_point(1) >= 0);
     assert(image_point(1) < image_height);
-    assert(std::fabs(image_point(2) - 1.0) > 1.0e-6);
+    assert(std::fabs(image_point(2) - 1.0) < 1.0e-6);
     image_points.emplace_back(image_point);
   }
 }
@@ -165,5 +168,22 @@ void ImageDataGenerator::AddNoiseToWorldPoints(
     noised_points.emplace_back(
         point + icp_cov::utils::PointNoise3d(world_point_noise_sigma));
   }
+}
+
+void ImageDataGenerator::Visualization() const {
+  // step 0: get parameters from Config
+  auto config = icp_cov::Config::Instance();
+  const int image_width = config->kImageWidth;
+  const int image_height = config->kImageHeight;
+  // step 1: generate canvas
+  cv::Mat canvas = cv::Mat::zeros(image_height, image_width, CV_8UC3);
+  for (const auto& point : image_points1_gt_) {
+    cv::circle(canvas, cv::Point2f(point(0), point(1)), 3, kColorGreen, -1);
+  }
+  // for (const auto& point : image_points1_with_noise_) {
+  //   cv::circle(canvas, cv::Point2f(point(0), point(1)), 3, kColorRed, -1);
+  // }
+  cv::imshow("image_data", canvas);
+  cv::waitKey(0);
 }
 }  // namespace icp_cov

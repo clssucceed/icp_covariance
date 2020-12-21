@@ -38,6 +38,7 @@ class FiniteRectangle {
     four_corner_points_.emplace_back(point1);
     four_corner_points_.emplace_back(point2);
     four_corner_points_.emplace_back(point3);
+    GeneratePointsOnPlane();
   }
   FiniteRectangle() = delete;
   bool CalculateIntersectionPointWithOneRay(
