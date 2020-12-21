@@ -267,5 +267,12 @@ void CalculateVisiblePlanesOfTargetToSensor(
           (anchor_point_index + 1 + 4) % 4),
       target_center_pose_in_sensor_frame, target_size, visible_planes);
 }
+
+void DrawPointsToImage(const std::vector<Eigen::Vector3d>& points,
+                       const cv::Scalar& color, cv::Mat& image) {
+  for (const auto& point : points) {
+    cv::circle(image, cv::Point2f(point(0), point(1)), 3, color, -1);
+  }
+}
 }  // namespace utils
 }  // namespace icp_cov

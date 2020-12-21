@@ -1,7 +1,9 @@
 #pragma once
 #include <Eigen/Dense>
 #include <vector>
+
 #include "finite_rectangle.h"
+#include <opencv2/opencv.hpp>
 
 namespace icp_cov {
 namespace utils {
@@ -29,5 +31,7 @@ void CalculateVisiblePlanesOfTargetToSensor(
     const Eigen::Affine3d& sensor_pose_in_ego_frame,
     const Eigen::Vector3d& target_size,
     std::vector<FiniteRectangle>& visible_planes);
+void DrawPointsToImage(const std::vector<Eigen::Vector3d>& points,
+                       const cv::Scalar& color, cv::Mat& image);
 }  // namespace utils
 }  // namespace icp_cov

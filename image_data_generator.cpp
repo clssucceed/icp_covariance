@@ -176,14 +176,18 @@ void ImageDataGenerator::Visualization() const {
   const int image_width = config->kImageWidth;
   const int image_height = config->kImageHeight;
   // step 1: generate canvas
-  cv::Mat canvas = cv::Mat::zeros(image_height, image_width, CV_8UC3);
-  for (const auto& point : image_points1_gt_) {
-    cv::circle(canvas, cv::Point2f(point(0), point(1)), 3, kColorGreen, -1);
-  }
-  // for (const auto& point : image_points1_with_noise_) {
-  //   cv::circle(canvas, cv::Point2f(point(0), point(1)), 3, kColorRed, -1);
-  // }
-  cv::imshow("image_data", canvas);
+  cv::Mat canvas1 = cv::Mat::zeros(image_height, image_width, CV_8UC3);
+  cv::Mat canvas2 = cv::Mat::zeros(image_height, image_width, CV_8UC3);
+  // step 2: draw points to canvas
+  icp_cov::utils::DrawPointsToImage(image_points1_gt_, kColorGreen, canvas1);
+  icp_cov::utils::DrawPointsToImage(image_points1_with_noise_, kColorRed, canvas1);
+  cv::imwrite("image_data1.png", canvas1);
+  icp_cov::utils::DrawPointsToImage(image_points2_gt_, kColorGreen, canvas2);
+  icp_cov::utils::DrawPointsToImage(image_points2_with_noise_, kColorRed, canvas2);
+  cv::imwrite("image_data2.png", canvas2);
+  return;
+  cv::imshow("image_data1", canvas1);
+  cv::imshow("image_data2", canvas2);
   cv::waitKey(0);
 }
 }  // namespace icp_cov
