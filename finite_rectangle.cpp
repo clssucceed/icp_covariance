@@ -35,17 +35,17 @@ void FiniteRectangle::GeneratePointsOnPlane() {
   // step 0: read config and calculate point number
   const double cell_size =
       icp_cov::Config::Instance()->kCellSizeOnTarget;  // unit: m
-  const int point_number_in_length_direction =
-      std::floor(length_ * 0.5 / cell_size) * 2;
-  const int point_number_in_width_direction =
-      std::floor(width_ * 0.5 / cell_size) * 2;
+  const int half_point_number_in_length_direction =
+      std::floor(length_ * 0.5 / cell_size);
+  const int half_point_number_in_width_direction =
+      std::floor(width_ * 0.5 / cell_size);
   // step 1: generate points in finite rectangle center frame
   static std::vector<Eigen::Vector3d> points_in_finite_rectangle_center_frame;
   points_in_finite_rectangle_center_frame.clear();
-  for (int index_length = -point_number_in_length_direction;
-       index_length <= point_number_in_length_direction; index_length++) {
-    for (int index_width = -point_number_in_width_direction;
-         index_width <= point_number_in_width_direction; index_width++) {
+  for (int index_length = -half_point_number_in_length_direction;
+       index_length <= half_point_number_in_length_direction; index_length++) {
+    for (int index_width = -half_point_number_in_width_direction;
+         index_width <= half_point_number_in_width_direction; index_width++) {
       points_in_finite_rectangle_center_frame.emplace_back(Eigen::Vector3d(
           index_length * cell_size, index_width * cell_size, 0));
     }

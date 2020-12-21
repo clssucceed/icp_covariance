@@ -85,6 +85,11 @@ class FiniteRectangle {
               << normalized_width_direction_.transpose() << std::endl;
     std::cout << "length_: " << length_ << std::endl;
     std::cout << "width_: " << width_ << std::endl;
+    std::cout << "corner_points: ";
+    for (const auto& point : four_corner_points_) {
+      std::cout << point.transpose() << ", ";
+    }
+    std::cout << std::endl;
   }
 
  private:
