@@ -38,6 +38,10 @@ class Config {
   Eigen::Matrix3d kCameraIntrinsicMatrix;
   int kImageWidth;
   int kImageHeight;
+  // noise
+  double kLidarPclNoise;
+  double kInitialRotationNoise;
+  double kInitialTranslationNoise;
   // others
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;

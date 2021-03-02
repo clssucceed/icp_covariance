@@ -343,9 +343,10 @@ void DataGenerator::GeneratePointsOnLineSegmentInEgoFrame(
 void DataGenerator::AddNoiseToPoints(
     const std::vector<Eigen::Vector3d>& pcl_in_ego_frame,
     std::vector<Eigen::Vector3d>& pcl_in_ego_frame_with_noise) {
+  auto config = icp_cov::Config::Instance();      
   pcl_in_ego_frame_with_noise.clear();
   pcl_in_ego_frame_with_noise.reserve(pcl_in_ego_frame.size());
-  constexpr double kNoiseSigma = 0.03;  // unit: m
+  const double kNoiseSigma = config->kLidarPclNoise;  // unit: m
   for (const auto& point : pcl_in_ego_frame) {
     pcl_in_ego_frame_with_noise.emplace_back(
         point + icp_cov::utils::PointNoise2d(kNoiseSigma));
@@ -353,8 +354,10 @@ void DataGenerator::AddNoiseToPoints(
 }
 
 void DataGenerator::AddNoiseToIcpTransform() {
+  auto config = icp_cov::Config::Instance();      
   icp_transform_init_ =
       icp_transform_ *
-      icp_cov::utils::TransformNoise(2.0 / 180 * M_PI, 0.2);  // 2deg + 0.2m
+      icp_cov::utils::TransformNoise(config->kInitialRotationNoise / 180 * M_PI, 
+      config->kInitialTranslationNoise);  // 2deg + 0.2m
 }
 }  // namespace icp_cov

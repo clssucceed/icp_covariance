@@ -119,6 +119,14 @@ Config::Config() {
   kImageHeight = yaml_node_["image_height"].as<int>();
   std::cout << "image_height: " << kImageHeight << std::endl;
 
+  // noise
+  kLidarPclNoise = yaml_node_["lidar_pcl_noise"].as<double>();
+  std::cout << "lidar_pcl_noise: " << kLidarPclNoise << std::endl;
+  kInitialRotationNoise = yaml_node_["initial_rotation_noise"].as<double>();
+  std::cout << "initial_rotation_noise: " << kInitialRotationNoise << std::endl;
+  kInitialTranslationNoise = yaml_node_["initial_translation_noise"].as<double>();
+  std::cout << "initial_translation_noise: " << kInitialTranslationNoise << std::endl;
+
   // others
   kDeltaTimeBetweenTwoFrame =
       yaml_node_["delta_time_between_two_frame"].as<double>();

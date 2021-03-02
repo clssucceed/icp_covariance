@@ -68,6 +68,11 @@ camera_intrinsic_matrix:
 image_width: 1280
 image_height: 720  
 
+# noise
+lidar_pcl_noise: 0.03 #unit: m
+initial_rotation_noise: 2 #unit: deg
+initial_translation_noise: 0.2 #unit: m
+
 # others
 delta_time_between_two_frame: 0.1 #unit: sec
 generate_3d_data: true
