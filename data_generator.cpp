@@ -193,9 +193,9 @@ void DataGenerator::CalculateHIndexAndVIndexRange(
     const Eigen::Vector3d normalized_corner_point = corner_point.normalized();
     const double vangle = -std::asin(normalized_corner_point(2)) *
                           icp_cov::Config::Instance()->kRadToDeg;
-    assert(vangle > -horizontal_laser_index * vertical_angle_resolution);
-    assert(vangle <
-           (laser_number - horizontal_laser_index) * vertical_angle_resolution);
+    // assert(vangle > -horizontal_laser_index * vertical_angle_resolution);
+    // assert(vangle <
+    //        (laser_number - horizontal_laser_index) * vertical_angle_resolution);
     double hangle =
         std::atan2(normalized_corner_point(1), normalized_corner_point(0)) *
         icp_cov::Config::Instance()->kRadToDeg;
@@ -204,8 +204,8 @@ void DataGenerator::CalculateHIndexAndVIndexRange(
     assert(hangle <= 360);
     // step 2.2: calculate hindex and vindex
     const double hindex = hangle / horizontal_angle_resolution;
-    const double vindex =
-        vangle / vertical_angle_resolution + horizontal_laser_index;
+    const double vindex = std::min(static_cast<double>(laser_number), 
+        std::max(0.0, vangle / vertical_angle_resolution + horizontal_laser_index));
     // step 2.3: calculate range
     hindex_begin =
         hindex_begin > std::floor(hindex) ? std::floor(hindex) : hindex_begin;

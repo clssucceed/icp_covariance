@@ -40,10 +40,10 @@ target_size:
 cell_size_on_target: 0.2 # unit: m
 
 # lidar config
-horizontal_angle_resolution: 0.4 # unit: deg
-vertical_angle_resolution: 1 # unit : deg
+horizontal_angle_resolution: 0.2 # unit: deg
+vertical_angle_resolution: 0.33 # unit : deg
 laser_number: 40
-horizontal_laser_index: 25
+horizontal_laser_index: 29
 lidar_pose_in_ego_frame:
   yaw: 0.0 # unit: deg
   pitch: 0.0
