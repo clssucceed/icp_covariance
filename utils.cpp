@@ -61,7 +61,7 @@ Eigen::Affine3d TransformNoise(const double rotation_sigma,
   static std::default_random_engine e(std::time(0));
   // 产生正态分布对象
   static std::normal_distribution<double> n_rotation(0, rotation_sigma);
-  static std::normal_distribution<double> n_translation(0, rotation_sigma);
+  static std::normal_distribution<double> n_translation(0, translation_sigma);
   // 生成Transform noise
   Eigen::Vector3d theta_noise(0, 0, n_rotation(e));
   Eigen::Matrix3d rotation_noise{DeltaQ(theta_noise)};
