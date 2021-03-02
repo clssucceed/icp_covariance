@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(icp_covariance)
-add_definitions(-std=c++11)
+add_definitions(-std=c++17)
 find_package(Eigen3)
 find_package(OpenCV)
 find_package(PCL)
