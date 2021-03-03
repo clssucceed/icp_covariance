@@ -45,6 +45,7 @@ class PclAlignment {
   PclAlignment() { pcl1_aligned_.reset(new PointCloudT); };
 
  private:
+  void Downsample();
   void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
   void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
 
@@ -56,6 +57,8 @@ class PclAlignment {
   PointCloudT::Ptr pcl1_ = nullptr;
   PointCloudT::Ptr pcl1_aligned_ = nullptr;
   PointCloudT::Ptr pcl2_ = nullptr;
+  PointCloudT::Ptr pcl1_downsampled_ = nullptr;
+  PointCloudT::Ptr pcl2_downsampled_ = nullptr;
 
   Eigen::Affine3d icp_transform_init_;
   Eigen::Affine3d icp_transform_est_;

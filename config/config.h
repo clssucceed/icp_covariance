@@ -42,6 +42,9 @@ class Config {
   double kLidarPclNoise;
   double kInitialRotationNoise;
   double kInitialTranslationNoise;
+  // downsample
+  bool kDownsample;
+  double kLeafSize;
   // others
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;

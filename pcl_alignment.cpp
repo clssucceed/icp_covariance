@@ -1,8 +1,11 @@
 #include "pcl_alignment.h"
 
 #include <pcl/registration/icp.h>
+#include <pcl/filters/voxel_grid.h>
 
 #include "utils.h"
+
+#include "config/config.h"
 
 namespace icp_cov {
 PclAlignment* PclAlignment::pcl_alignment_ = nullptr;
@@ -40,19 +43,41 @@ void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
 // TODO(clssucceed@gmail.com): 尝试2d
 // icp(pcl::registration::TransformationEstimation2D)
 void PclAlignment::Align() {
-  assert(pcl1_);
-  assert(pcl2_);
+  Downsample();
   pcl1_aligned_.reset(new PointCloudT);
   assert(pcl1_aligned_);
   pcl::IterativeClosestPoint<PointT, PointT> icp;
   icp.setMaximumIterations(kMaxIterations);
-  icp.setInputSource(pcl1_);
-  icp.setInputTarget(pcl2_);
+  icp.setInputSource(pcl1_downsampled_);
+  icp.setInputTarget(pcl2_downsampled_);
   icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
   assert(icp.hasConverged());
   PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
   icp_transform_est_ = icp.getFinalTransformation().cast<double>();
   icp_fitness_score_ = icp.getFitnessScore();
+}
+
+void PclAlignment::Downsample() {
+  assert(pcl1_);
+  assert(pcl2_);
+  auto config = icp_cov::Config::Instance();
+  if (config->kDownsample) {
+    pcl::VoxelGrid<PointT> downsample1;
+    downsample1.setInputCloud(pcl1_);
+    downsample1.setLeafSize(config->kLeafSize, config->kLeafSize, config->kLeafSize);
+    pcl1_downsampled_.reset(new PointCloudT);
+    downsample1.filter(*pcl1_downsampled_);
+    
+    pcl::VoxelGrid<PointT> downsample2;
+    downsample2.setInputCloud(pcl2_);
+    downsample2.setLeafSize(config->kLeafSize, config->kLeafSize, config->kLeafSize);
+    pcl2_downsampled_.reset(new PointCloudT);
+    downsample2.filter(*pcl2_downsampled_);
+  } else {
+    pcl1_downsampled_ = pcl1_;
+    pcl2_downsampled_ = pcl2_;  
+  }
+  std::cout << "downsampled_pcl_size: " << pcl1_downsampled_->size() << "/" << pcl2_downsampled_->size() << std::endl;
 }
 
 void PclAlignment::Debug() {

@@ -60,5 +60,6 @@
     "core": "cpp",
     "numericaldiff": "cpp",
     "*.ipp": "cpp"
-  }
+  },
+  "C_Cpp.errorSquiggles": "Enabled"
 }

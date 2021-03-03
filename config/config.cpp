@@ -127,6 +127,12 @@ Config::Config() {
   kInitialTranslationNoise = yaml_node_["initial_translation_noise"].as<double>();
   std::cout << "initial_translation_noise: " << kInitialTranslationNoise << std::endl;
 
+  // downsample
+  kDownsample = yaml_node_["downsample"].as<bool>();
+  std::cout << "downsample: " << kDownsample << std::endl;
+  kLeafSize = yaml_node_["leaf_size"].as<double>();
+  std::cout << "leaf_size: " << kLeafSize << std::endl;
+
   // others
   kDeltaTimeBetweenTwoFrame =
       yaml_node_["delta_time_between_two_frame"].as<double>();
