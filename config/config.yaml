@@ -74,7 +74,7 @@ initial_rotation_noise: 2 #unit: deg
 initial_translation_noise: 0.2 #unit: m
 
 # downsample
-downsample: true
+downsample: false
 leaf_size: 0.2 #unit: m
 
 # others
