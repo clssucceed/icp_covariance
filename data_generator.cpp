@@ -79,8 +79,10 @@ void DataGenerator::Generate2d() {
 }
 
 void DataGenerator::Generate3d() {
+  // std::cout << "generate points for target 1" << std::endl;  
   GeneratePointsInEgoFrame3dVersion(ego_pose1_, target_pose1_,
                                     pcl1_in_ego_frame_);
+  // std::cout << "generate points for target 2" << std::endl;  
   GeneratePointsInEgoFrame3dVersion(ego_pose2_, target_pose2_,
                                     pcl2_in_ego_frame_);
 }
@@ -126,6 +128,8 @@ void DataGenerator::GeneratePointsInEgoFrame3dVersion(
   CalculateHIndexAndVIndexRange(target_center_pose_in_lidar_frame, target_size,
                                 hindex_begin, hindex_end, vindex_begin,
                                 vindex_end);
+  // std::cout << "hindex: " << hindex_begin << "~" << hindex_end << std::endl;                              
+  // std::cout << "vindex: " << vindex_begin << "~" << vindex_end << std::endl;                              
   for (int hindex = hindex_begin; hindex < hindex_end; ++hindex) {
     double hangle = hindex * horizontal_angle_resolution * config->kDegToRad;
     for (int vindex = vindex_begin; vindex < vindex_end; ++vindex) {
@@ -133,6 +137,7 @@ void DataGenerator::GeneratePointsInEgoFrame3dVersion(
                       vertical_angle_resolution * config->kDegToRad;
       // generate one point from intersection of laser ray and visible plane
       Eigen::Vector3d generated_point;
+      // TODO(clssuceed@gmail.com): I-Shape时为什么长边上会有点
       if (GenerateOnePointFromHangleAndVangle(hangle, vangle, visible_planes,
                                               generated_point)) {
         pcl_in_lidar_frame.emplace_back(generated_point);
@@ -203,9 +208,12 @@ void DataGenerator::CalculateHIndexAndVIndexRange(
     assert(hangle >= 0);
     assert(hangle <= 360);
     // step 2.2: calculate hindex and vindex
-    const double hindex = hangle / horizontal_angle_resolution;
+    // TODO(clssucceed@gmail.com): hindex的计算假设target_center对应的角度为0度，不是很general
+    const double hindex = hangle < 180 ? (hangle / horizontal_angle_resolution) 
+        : ((hangle - 360) / horizontal_angle_resolution);
     const double vindex = std::min(static_cast<double>(laser_number), 
         std::max(0.0, vangle / vertical_angle_resolution + horizontal_laser_index));
+    // std::cout << "h/v: " << hindex << " " << vindex << std::endl;
     // step 2.3: calculate range
     hindex_begin =
         hindex_begin > std::floor(hindex) ? std::floor(hindex) : hindex_begin;
@@ -216,8 +224,8 @@ void DataGenerator::CalculateHIndexAndVIndexRange(
     vindex_end =
         vindex_end < std::ceil(vindex) ? std::ceil(vindex) : vindex_end;
   }
-  assert(hindex_begin >= 0 && hindex_begin < hindex_end &&
-         hindex_end <= 360 / horizontal_angle_resolution);
+  //   assert(hindex_begin >= 0 && hindex_begin < hindex_end &&
+  //          hindex_end <= 360 / horizontal_angle_resolution);
   assert(vindex_begin >= 0 && vindex_begin < vindex_end &&
          vindex_end <= laser_number);
 }

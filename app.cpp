@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
   // step 1: generate data
   // pcl
   auto data_generator = icp_cov::DataGenerator::Instance();
+  // std::cout << "data_generator->Generate" << std::endl;
   data_generator->Generate();
   auto pcl1_in_ref_frame = data_generator->pcl1_in_ref_frame();
   auto pcl2_in_ref_frame = data_generator->pcl2_in_ref_frame();
