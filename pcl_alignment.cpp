@@ -11,6 +11,7 @@
 #include "config/config.h"
 #include <thread>
 #include <chrono>
+#include <unordered_set>
 
 namespace icp_cov {
 PclAlignment* PclAlignment::pcl_alignment_ = nullptr;
@@ -100,20 +101,20 @@ void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::
 }
 
 void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
-  // step 1: prepare: calc nnn(nearest neighbor number) + mev(minimum_eigen_value)
+  // step 1: prepare: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
   auto config = icp_cov::Config::Instance();
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
   kdtree.setInputCloud (pcl_input);
   const int pcl_size = pcl_input->size();
-  std::map<int, int> map_nnn_to_index;
-  std::map<float, int> map_mev_to_index;
+  std::multimap<int, int> map_nnn_to_index;
+  std::multimap<float, int, std::greater<float>> map_mevr_to_index;
   std::vector<int> nnn_vec;
-  std::vector<float> mev_vec;
+  std::vector<float> mevr_vec;
   std::vector<int> pointIdxRadiusSearch;
   std::vector<float> pointRadiusSquaredDistance;
-  Eigen::Matrix3f cov;
+  Eigen::Matrix3d cov;
   int max_nnn = -1;
-  float max_mev = -1.0;
+  float max_mevr = -1.0;
   const float radius = config->kLeafSize * 3;
   for (int i = 0; i < pcl_size; ++i) {
     pointIdxRadiusSearch.clear();
@@ -124,34 +125,71 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
     assert(nnn == pointIdxRadiusSearch.size());
     assert(nnn == pointRadiusSquaredDistance.size());
     cov.setZero();
-    const Eigen::Vector3f cp(current_point.x, current_point.y, current_point.z);
+    const Eigen::Vector3d cp(current_point.x, current_point.y, current_point.z);
     for (const auto idx : pointIdxRadiusSearch) {
       const auto& neighbor_point = pcl_input->at(idx);
-      const Eigen::Vector3f np(neighbor_point.x, neighbor_point.y, neighbor_point.z);
-      const Eigen::Vector3f diff = cp - np;
+      const Eigen::Vector3d np(neighbor_point.x, neighbor_point.y, neighbor_point.z);
+      const Eigen::Vector3d diff = cp - np;
       cov += diff * diff.transpose();
     }
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver (cov);
-    const float mev = solver.eigenvalues ()[0];
-    // map_nnn_to_index[nnn] = i;
-    // map_mev_to_index[mev] = i;
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver (cov);
+    const Eigen::Vector3d eigen_values = solver.eigenvalues(); 
+    assert(eigen_values(1) + eigen_values(2) > 1.0e-6);
+    const float mevr = eigen_values(0) / (eigen_values(1) + eigen_values(2));
+    map_nnn_to_index.insert({nnn, i});
+    map_mevr_to_index.insert({mevr, i});
     max_nnn = std::max(max_nnn, nnn);
-    max_mev = std::max(max_mev, mev);
+    max_mevr = std::max(max_mevr, mevr);
     nnn_vec.push_back(nnn);
-    mev_vec.push_back(mev);
+    mevr_vec.push_back(mevr);
   }
-  // assert(map_nnn_to_index.size() == pcl_size);
-  // assert(map_mev_to_index.size() == pcl_size);
+  assert(map_nnn_to_index.size() == pcl_size);
+  assert(map_mevr_to_index.size() == pcl_size);
   assert(nnn_vec.size() == pcl_size);
-  assert(mev_vec.size() == pcl_size);
-  // step 2: detect point: mev is large enough || nnn is small enough
+  assert(mevr_vec.size() == pcl_size);
+  // step 2: detect point: mevr is large enough || nnn is small enough
   assert(pcl_output);
-  const int nnn_th = 0.5 * max_nnn;
-  const float mev_th = 0.5 * max_mev;
-  for (int i = 0; i < pcl_size; ++i) {
-    if (nnn_vec.at(i) < nnn_th || mev_vec.at(i) > mev_th) {
-      pcl_output->push_back(pcl_input->at(i));
+  std::unordered_set<int> selected_indexes;
+  const float mevr_th = std::max(0.5 * max_mevr, 0.1);
+  float last_mevr = map_mevr_to_index.begin()->first;
+  std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
+  for (const auto& item : map_mevr_to_index) {
+    const float mevr = item.first;
+    if (mevr < mevr_th) {
+      std::cout << "mevr < mevr_th: " << mevr << " < " << mevr_th << std::endl;  
+      break;
     }
+    if (last_mevr > 5 * mevr) {
+      std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
+      break;  
+    } 
+    if (selected_indexes.size() >= 100) {
+      std::cout << "selected_indexes.size() >= 100: " << selected_indexes.size() << "/" << mevr << std::endl;
+      break;
+    }
+    selected_indexes.insert(item.second);
+    last_mevr = mevr;
+  }
+  const int mevr_select_num = selected_indexes.size();
+  std::cout << "mevr select " << mevr_select_num << std::endl;
+  const int nnn_th = 0.5 * max_nnn;
+  std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
+  for (const auto& item : map_nnn_to_index) {
+    const int nnn = item.first;
+    if (nnn > nnn_th) {
+      std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
+      break;
+    }
+    if (selected_indexes.size() >= 200) {
+      std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
+    }
+    selected_indexes.insert(item.second);
+  }
+  const int nnn_select_num = selected_indexes.size() - mevr_select_num;
+  std::cout << "nnn select " << nnn_select_num << std::endl;
+  assert(pcl_output);
+  for (const auto& index : selected_indexes) {
+    pcl_output->push_back(pcl_input->at(index));
   }
 }
 
@@ -181,7 +219,6 @@ void PclAlignment::DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr p
 }
 
 void PclAlignment::Visualization() {
-  return;
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("pcl_alignment"));
   viewer->setBackgroundColor (0, 0, 0);
 
