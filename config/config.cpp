@@ -133,6 +133,22 @@ Config::Config() {
   kLeafSize = yaml_node_["leaf_size"].as<double>();
   std::cout << "leaf_size: " << kLeafSize << std::endl;
 
+  // edge detection
+  kEdgeDetection = yaml_node_["edge_detection"].as<bool>();
+  std::cout << "edge_detection: " << kEdgeDetection << std::endl;
+  kRadiusRatio = yaml_node_["radius_ratio"].as<double>();
+  std::cout << "radius_ratio: " << kRadiusRatio << std::endl;
+  kMevrThRatio = yaml_node_["mevr_th_ratio"].as<double>();
+  std::cout << "mevr_th_ratio: " << kMevrThRatio << std::endl;
+  kMevrThLowBound = yaml_node_["mevr_th_low_bound"].as<double>();
+  std::cout << "mevr_th_low_bound: " << kMevrThLowBound << std::endl;
+  kMevrSelectNumUpBound = yaml_node_["mevr_select_num_up_bound"].as<int>();
+  std::cout << "mevr_select_num_up_bound: " << kMevrSelectNumUpBound << std::endl;
+  kNnnThRatio = yaml_node_["nnn_th_ratio"].as<double>();
+  std::cout << "nnn_th_ratio: " << kNnnThRatio << std::endl;
+  kAllSelectNumUpBound = yaml_node_["all_select_num_up_bound"].as<int>();
+  std::cout << "all_select_num_up_bound: " << kAllSelectNumUpBound << std::endl;
+
   // others
   kDeltaTimeBetweenTwoFrame =
       yaml_node_["delta_time_between_two_frame"].as<double>();
@@ -140,6 +156,9 @@ Config::Config() {
             << std::endl;
   kGenerate3d = yaml_node_["generate_3d_data"].as<bool>();
   std::cout << "generate_3d_data: " << static_cast<int>(kGenerate3d)
+            << std::endl;
+  kPclAlignmentVisualization = yaml_node_["pcl_alignment_visualization"].as<bool>();
+  std::cout << "pcl_alignment_visualization: " << static_cast<int>(kPclAlignmentVisualization)
             << std::endl;
 }
 }  // namespace icp_cov

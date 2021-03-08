@@ -45,9 +45,18 @@ class Config {
   // downsample
   bool kDownsample;
   double kLeafSize;
+  // edge detection
+  bool kEdgeDetection;
+  double kRadiusRatio;
+  double kMevrThRatio;
+  double kMevrThLowBound;
+  int kMevrSelectNumUpBound;
+  double kNnnThRatio;
+  int kAllSelectNumUpBound;
   // others
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;
+  bool kPclAlignmentVisualization;
 
  private:
   static Config* config_;

@@ -89,10 +89,16 @@ void PclAlignment::Downsample() {
 }
 
 void PclAlignment::DetectKeyPoint() {
-  pcl1_key_points_.reset(new PointCloudT);
-  pcl2_key_points_.reset(new PointCloudT);
-  DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
-  DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+  auto config = icp_cov::Config::Instance();
+  if (config->kEdgeDetection) {
+    pcl1_key_points_.reset(new PointCloudT);
+    pcl2_key_points_.reset(new PointCloudT);
+    DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
+    DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+  } else {
+    pcl1_key_points_ = pcl1_downsampled_;
+    pcl2_key_points_ = pcl2_downsampled_;
+  }
   std::cout << "key_points_size: " << pcl1_key_points_->size() << "/" << pcl2_key_points_->size() << std::endl;
 }
 
@@ -115,7 +121,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   Eigen::Matrix3d cov;
   int max_nnn = -1;
   float max_mevr = -1.0;
-  const float radius = config->kLeafSize * 3;
+  const float radius = config->kLeafSize * config->kRadiusRatio;
   for (int i = 0; i < pcl_size; ++i) {
     pointIdxRadiusSearch.clear();
     pointRadiusSquaredDistance.clear();
@@ -150,7 +156,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   // step 2: detect point: mevr is large enough || nnn is small enough
   assert(pcl_output);
   std::unordered_set<int> selected_indexes;
-  const float mevr_th = std::max(0.5 * max_mevr, 0.1);
+  const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
   float last_mevr = map_mevr_to_index.begin()->first;
   std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
   for (const auto& item : map_mevr_to_index) {
@@ -163,7 +169,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
       std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
       break;  
     } 
-    if (selected_indexes.size() >= 100) {
+    if (selected_indexes.size() >= config->kMevrSelectNumUpBound) {
       std::cout << "selected_indexes.size() >= 100: " << selected_indexes.size() << "/" << mevr << std::endl;
       break;
     }
@@ -172,7 +178,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   }
   const int mevr_select_num = selected_indexes.size();
   std::cout << "mevr select " << mevr_select_num << std::endl;
-  const int nnn_th = 0.5 * max_nnn;
+  const int nnn_th = config->kNnnThRatio * max_nnn;
   std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
   for (const auto& item : map_nnn_to_index) {
     const int nnn = item.first;
@@ -180,7 +186,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
       std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
       break;
     }
-    if (selected_indexes.size() >= 200) {
+    if (selected_indexes.size() >= config->kAllSelectNumUpBound) {
       std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
     }
     selected_indexes.insert(item.second);
@@ -219,6 +225,9 @@ void PclAlignment::DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr p
 }
 
 void PclAlignment::Visualization() {
+  auto config = icp_cov::Config::Instance();
+  if (!config->kPclAlignmentVisualization) return;
+
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("pcl_alignment"));
   viewer->setBackgroundColor (0, 0, 0);
 
