@@ -3,10 +3,13 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/keypoints/iss_3d.h>
+#include <pcl/visualization/pcl_visualizer.h>
 
 #include "utils.h"
 
 #include "config/config.h"
+#include <thread>
+#include <chrono>
 
 namespace icp_cov {
 PclAlignment* PclAlignment::pcl_alignment_ = nullptr;
@@ -57,6 +60,7 @@ void PclAlignment::Align() {
   PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
   icp_transform_est_ = icp.getFinalTransformation().cast<double>();
   icp_fitness_score_ = icp.getFitnessScore();
+  Visualization();
 }
 
 void PclAlignment::Downsample() {
@@ -113,6 +117,28 @@ void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::
   }
   assert(pcl_output);
   iss_detector.compute (*pcl_output);
+}
+
+void PclAlignment::Visualization() {
+  pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("pcl_alignment"));
+  viewer->setBackgroundColor (0, 0, 0);
+
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl1_downsampled_color(pcl1_downsampled_, 255, 0, 0);
+  viewer->addPointCloud<pcl::PointXYZ> (pcl1_downsampled_, pcl1_downsampled_color, "pcl1_downsampled");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "pcl1_downsampled");
+  
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl2_downsampled_color(pcl2_downsampled_, 0, 255, 0);
+  viewer->addPointCloud<pcl::PointXYZ> (pcl2_downsampled_, pcl2_downsampled_color, "pcl2_downsampled");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "pcl2_downsampled");
+
+  viewer->addCoordinateSystem (1.0, pcl1_pose_.cast<float>());
+  viewer->initCameraParameters ();
+
+  while (!viewer->wasStopped ()) {
+    viewer->spinOnce (100);
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(100ms);
+  }
 }
 
 void PclAlignment::Debug() {

@@ -29,6 +29,12 @@ class PclAlignment {
   void set_icp_transform_init(const Eigen::Affine3d& icp_transform_init) {
     icp_transform_init_ = icp_transform_init;
   }
+  void set_pcl1_pose(const Eigen::Affine3d& pcl1_pose) {
+    pcl1_pose_ = pcl1_pose;
+  }
+  void set_pcl2_pose(const Eigen::Affine3d& pcl2_pose) {
+    pcl2_pose_ = pcl2_pose;
+  }
   Eigen::Affine3d icp_transform_init() const { return icp_transform_init_; }
   Eigen::Affine3d icp_transform_est() const { return icp_transform_est_; }
   double icp_fitness_score() const { return icp_fitness_score_; }
@@ -50,6 +56,7 @@ class PclAlignment {
   void DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
   void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
+  void Visualization();
 
  private:
   // all points are in world frame
@@ -64,9 +71,11 @@ class PclAlignment {
   PointCloudT::Ptr pcl1_key_points_ = nullptr;
   PointCloudT::Ptr pcl2_key_points_ = nullptr;
   
-
   Eigen::Affine3d icp_transform_init_;
   Eigen::Affine3d icp_transform_est_;
   double icp_fitness_score_ = -1.0;
+
+  Eigen::Affine3d pcl1_pose_;
+  Eigen::Affine3d pcl2_pose_;
 };
 }  // namespace icp_cov

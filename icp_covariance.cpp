@@ -62,6 +62,8 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
     pcl_alignment->set_eigen_pcl1(pcl1_in_world_frame_with_noise);
     pcl_alignment->set_eigen_pcl2(pcl2_in_world_frame_with_noise);
     pcl_alignment->set_icp_transform_init(icp_transform_init);
+    pcl_alignment->set_pcl1_pose(data_generator->target_pose1());
+    pcl_alignment->set_pcl2_pose(data_generator->target_pose2());
     pcl_alignment->Align();
     Eigen::Affine3d icp_transform_est = pcl_alignment->icp_transform_est();
     // icp_transform_est = icp_cov::utils::RtToAffine3d(
