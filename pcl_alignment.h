@@ -54,6 +54,8 @@ class PclAlignment {
   void Downsample();
   void DetectKeyPoint();
   void DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
+  void DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
+  void DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
   void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
   void Visualization();

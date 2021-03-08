@@ -4,6 +4,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/kdtree/kdtree_flann.h>
 
 #include "utils.h"
 
@@ -53,8 +54,8 @@ void PclAlignment::Align() {
   assert(pcl1_aligned_);
   pcl::IterativeClosestPoint<PointT, PointT> icp;
   icp.setMaximumIterations(kMaxIterations);
-  icp.setInputSource(pcl1_downsampled_);
-  icp.setInputTarget(pcl2_downsampled_);
+  icp.setInputSource(pcl1_key_points_);
+  icp.setInputTarget(pcl2_key_points_);
   icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
   assert(icp.hasConverged());
   PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
@@ -87,11 +88,74 @@ void PclAlignment::Downsample() {
 }
 
 void PclAlignment::DetectKeyPoint() {
+  pcl1_key_points_.reset(new PointCloudT);
+  pcl2_key_points_.reset(new PointCloudT);
   DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
   DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+  std::cout << "key_points_size: " << pcl1_key_points_->size() << "/" << pcl2_key_points_->size() << std::endl;
 }
 
 void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
+  DetectEdgePoint(pcl_input, pcl_output);
+}
+
+void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
+  // step 1: prepare: calc nnn(nearest neighbor number) + mev(minimum_eigen_value)
+  auto config = icp_cov::Config::Instance();
+  pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+  kdtree.setInputCloud (pcl_input);
+  const int pcl_size = pcl_input->size();
+  std::map<int, int> map_nnn_to_index;
+  std::map<float, int> map_mev_to_index;
+  std::vector<int> nnn_vec;
+  std::vector<float> mev_vec;
+  std::vector<int> pointIdxRadiusSearch;
+  std::vector<float> pointRadiusSquaredDistance;
+  Eigen::Matrix3f cov;
+  int max_nnn = -1;
+  float max_mev = -1.0;
+  const float radius = config->kLeafSize * 3;
+  for (int i = 0; i < pcl_size; ++i) {
+    pointIdxRadiusSearch.clear();
+    pointRadiusSquaredDistance.clear();
+    const auto& current_point = pcl_input->at(i);
+    const int nnn = kdtree.radiusSearch(current_point, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
+    assert(nnn > 0); 
+    assert(nnn == pointIdxRadiusSearch.size());
+    assert(nnn == pointRadiusSquaredDistance.size());
+    cov.setZero();
+    const Eigen::Vector3f cp(current_point.x, current_point.y, current_point.z);
+    for (const auto idx : pointIdxRadiusSearch) {
+      const auto& neighbor_point = pcl_input->at(idx);
+      const Eigen::Vector3f np(neighbor_point.x, neighbor_point.y, neighbor_point.z);
+      const Eigen::Vector3f diff = cp - np;
+      cov += diff * diff.transpose();
+    }
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver (cov);
+    const float mev = solver.eigenvalues ()[0];
+    // map_nnn_to_index[nnn] = i;
+    // map_mev_to_index[mev] = i;
+    max_nnn = std::max(max_nnn, nnn);
+    max_mev = std::max(max_mev, mev);
+    nnn_vec.push_back(nnn);
+    mev_vec.push_back(mev);
+  }
+  // assert(map_nnn_to_index.size() == pcl_size);
+  // assert(map_mev_to_index.size() == pcl_size);
+  assert(nnn_vec.size() == pcl_size);
+  assert(mev_vec.size() == pcl_size);
+  // step 2: detect point: mev is large enough || nnn is small enough
+  assert(pcl_output);
+  const int nnn_th = 0.5 * max_nnn;
+  const float mev_th = 0.5 * max_mev;
+  for (int i = 0; i < pcl_size; ++i) {
+    if (nnn_vec.at(i) < nnn_th || mev_vec.at(i) > mev_th) {
+      pcl_output->push_back(pcl_input->at(i));
+    }
+  }
+}
+
+void PclAlignment::DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
   auto config = icp_cov::Config::Instance();
   const double cloud_resolution (config->kLaserHorizontalAngleResolution);
 
@@ -101,25 +165,23 @@ void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::
   pcl::ISSKeypoint3D<PointT, PointT> iss_detector;
   pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT> ());
   iss_detector.setSearchMethod (tree);
-  iss_detector.setSalientRadius (6 * cloud_resolution);
-  iss_detector.setNonMaxRadius (4 * cloud_resolution);
-  iss_detector.setNormalRadius (4 * cloud_resolution);
-  iss_detector.setBorderRadius (4 * cloud_resolution);
+  iss_detector.setSalientRadius (0.2);
+  iss_detector.setNonMaxRadius (0.01);
+  // iss_detector.setNormalRadius (4 * cloud_resolution);
+  // iss_detector.setBorderRadius (4 * cloud_resolution);
+  // iss_detector.setAngleThreshold (static_cast<float> (M_PI) / 3.0);
   iss_detector.setThreshold21 (0.975);
   iss_detector.setThreshold32 (0.975);
-  iss_detector.setMinNeighbors (5);
-  iss_detector.setAngleThreshold (static_cast<float> (M_PI) / 3.0);
+  iss_detector.setMinNeighbors (1);
   iss_detector.setNumberOfThreads (1);
   iss_detector.setInputCloud (pcl_input);
 
-  if (!pcl_output) {
-    pcl_output.reset(new PointCloudT);
-  }
   assert(pcl_output);
   iss_detector.compute (*pcl_output);
 }
 
 void PclAlignment::Visualization() {
+  return;
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("pcl_alignment"));
   viewer->setBackgroundColor (0, 0, 0);
 
@@ -130,6 +192,14 @@ void PclAlignment::Visualization() {
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl2_downsampled_color(pcl2_downsampled_, 0, 255, 0);
   viewer->addPointCloud<pcl::PointXYZ> (pcl2_downsampled_, pcl2_downsampled_color, "pcl2_downsampled");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "pcl2_downsampled");
+
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl1_key_points_color(pcl1_key_points_, 255, 0, 255);
+  viewer->addPointCloud<pcl::PointXYZ> (pcl1_key_points_, pcl1_key_points_color, "pcl1_key_points");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "pcl1_key_points");
+  
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl2_key_points_color(pcl2_key_points_, 0, 255, 255);
+  viewer->addPointCloud<pcl::PointXYZ> (pcl2_key_points_, pcl2_key_points_color, "pcl2_key_points");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "pcl2_key_points");
 
   viewer->addCoordinateSystem (1.0, pcl1_pose_.cast<float>());
   viewer->initCameraParameters ();
