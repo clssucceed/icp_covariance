@@ -46,6 +46,8 @@ class PclAlignment {
 
  private:
   void Downsample();
+  void DetectKeyPoint();
+  void DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
   void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
 
@@ -59,6 +61,9 @@ class PclAlignment {
   PointCloudT::Ptr pcl2_ = nullptr;
   PointCloudT::Ptr pcl1_downsampled_ = nullptr;
   PointCloudT::Ptr pcl2_downsampled_ = nullptr;
+  PointCloudT::Ptr pcl1_key_points_ = nullptr;
+  PointCloudT::Ptr pcl2_key_points_ = nullptr;
+  
 
   Eigen::Affine3d icp_transform_init_;
   Eigen::Affine3d icp_transform_est_;

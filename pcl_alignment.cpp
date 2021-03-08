@@ -2,6 +2,7 @@
 
 #include <pcl/registration/icp.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/keypoints/iss_3d.h>
 
 #include "utils.h"
 
@@ -44,6 +45,7 @@ void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
 // icp(pcl::registration::TransformationEstimation2D)
 void PclAlignment::Align() {
   Downsample();
+  DetectKeyPoint();
   pcl1_aligned_.reset(new PointCloudT);
   assert(pcl1_aligned_);
   pcl::IterativeClosestPoint<PointT, PointT> icp;
@@ -78,6 +80,39 @@ void PclAlignment::Downsample() {
     pcl2_downsampled_ = pcl2_;  
   }
   std::cout << "downsampled_pcl_size: " << pcl1_downsampled_->size() << "/" << pcl2_downsampled_->size() << std::endl;
+}
+
+void PclAlignment::DetectKeyPoint() {
+  DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
+  DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+}
+
+void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
+  auto config = icp_cov::Config::Instance();
+  const double cloud_resolution (config->kLaserHorizontalAngleResolution);
+
+  //
+  // Compute the ISS 3D keypoints - By first performing the Boundary Estimation
+  //
+  pcl::ISSKeypoint3D<PointT, PointT> iss_detector;
+  pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT> ());
+  iss_detector.setSearchMethod (tree);
+  iss_detector.setSalientRadius (6 * cloud_resolution);
+  iss_detector.setNonMaxRadius (4 * cloud_resolution);
+  iss_detector.setNormalRadius (4 * cloud_resolution);
+  iss_detector.setBorderRadius (4 * cloud_resolution);
+  iss_detector.setThreshold21 (0.975);
+  iss_detector.setThreshold32 (0.975);
+  iss_detector.setMinNeighbors (5);
+  iss_detector.setAngleThreshold (static_cast<float> (M_PI) / 3.0);
+  iss_detector.setNumberOfThreads (1);
+  iss_detector.setInputCloud (pcl_input);
+
+  if (!pcl_output) {
+    pcl_output.reset(new PointCloudT);
+  }
+  assert(pcl_output);
+  iss_detector.compute (*pcl_output);
 }
 
 void PclAlignment::Debug() {
