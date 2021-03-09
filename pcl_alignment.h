@@ -79,5 +79,11 @@ class PclAlignment {
 
   Eigen::Affine3d pcl1_pose_;
   Eigen::Affine3d pcl2_pose_;
+
+  // time analysis
+  double downsample_cost_ms = -1.0;
+  double edge_detection_cost_ms = -1.0;
+  double icp_cost_ms = -1.0;
+  double cost_cost_ms = -1.0;
 };
 }  // namespace icp_cov

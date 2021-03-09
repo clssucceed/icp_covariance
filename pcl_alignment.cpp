@@ -7,8 +7,9 @@
 #include <pcl/kdtree/kdtree_flann.h>
 
 #include "utils.h"
-
+#include "time_analysis.h"
 #include "config/config.h"
+
 #include <thread>
 #include <chrono>
 #include <unordered_set>
@@ -49,8 +50,14 @@ void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
 // TODO(clssucceed@gmail.com): 尝试2d
 // icp(pcl::registration::TransformationEstimation2D)
 void PclAlignment::Align() {
+  icp_cov::TimeAnalysis all_cost;
+  icp_cov::TimeAnalysis downsample_cost;
   Downsample();
+  downsample_cost.Stop("downsample");
+  icp_cov::TimeAnalysis detect_key_point_cost;
   DetectKeyPoint();
+  detect_key_point_cost.Stop("detect key point");
+  icp_cov::TimeAnalysis icp_cost;
   pcl1_aligned_.reset(new PointCloudT);
   assert(pcl1_aligned_);
   pcl::IterativeClosestPoint<PointT, PointT> icp;
@@ -62,6 +69,8 @@ void PclAlignment::Align() {
   PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
   icp_transform_est_ = icp.getFinalTransformation().cast<double>();
   icp_fitness_score_ = icp.getFitnessScore();
+  icp_cost.Stop("icp");
+  all_cost.Stop("all");
   Visualization();
 }
 

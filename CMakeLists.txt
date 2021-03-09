@@ -22,6 +22,7 @@ add_executable(icp_covariance
   visualization.cpp
   pcl_alignment.cpp
   icp_covariance.cpp
+  time_analysis.cpp
   config/config.cpp)
 
 target_link_libraries(icp_covariance Eigen3::Eigen ${OpenCV_LIBS} ${PCL_LIBRARIES} yaml-cpp)
