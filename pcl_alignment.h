@@ -4,6 +4,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include <list>
 
 namespace icp_cov {
 class PclAlignment {
@@ -62,6 +63,7 @@ class PclAlignment {
   void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
   void PclToEigenPcl(const PointCloudT::Ptr& pcl, EigenPointCloud& eigen_pcl);
   void Visualization();
+  Eigen::Vector3d EigenValuesOfPclDistribution(PointCloudT::ConstPtr pcl, const std::list<int> indexes);
 
  private:
   // all points are in world frame

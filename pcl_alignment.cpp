@@ -223,15 +223,21 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
 
 void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::Affine3d& target_pose, const Eigen::Vector3d& target_size, PointCloudT::Ptr pcl_output) {
   auto config = icp_cov::Config::Instance();
-  const double downsample_leaf_size = config->kLeafSize * config->kRadiusRatio;
-  assert(downsample_leaf_size > 1.0e-3);
   // step 1: init grid info
-  const int grid_x_len = static_cast<int>(target_size(0) / downsample_leaf_size) + 1; 
-  const int grid_y_len = static_cast<int>(target_size(1) / downsample_leaf_size) + 1; 
-  const int grid_z_len = static_cast<int>(target_size(2) / downsample_leaf_size) + 1; 
-  std::unordered_map<int, PointCloudT::Ptr> map_grid_index_to_points;
+  const double small_grid_size = config->kLeafSize;
+  const double large_grid_size = config->kRadiusRatio * small_grid_size;
+  const int paddle_size = 2;
+  assert(small_grid_size > 1.0e-3);
+  const int small_grid_x_len = static_cast<int>(target_size(0) / small_grid_size) + 1 + 2 * paddle_size; 
+  const int small_grid_y_len = static_cast<int>(target_size(1) / small_grid_size) + 1 + 2 * paddle_size; 
+  const int small_grid_z_len = static_cast<int>(target_size(2) / small_grid_size) + 1 + 2 * paddle_size; 
+  const int large_grid_x_len = static_cast<int>(target_size(0) / large_grid_size) + 1; 
+  const int large_grid_y_len = static_cast<int>(target_size(1) / large_grid_size) + 1; 
+  const int large_grid_z_len = static_cast<int>(target_size(2) / large_grid_size) + 1; 
+  std::unordered_map<int, std::list<int>> map_small_grid_index_to_point_indexes;
+  std::unordered_map<int, std::list<int>> map_large_grid_index_to_point_indexes;
   // step 2: assign each point to grid
-  // step 2.1: transform point cloud to target frame
+  // step 2.1: transform point cloud to target frame (O(n))
   // step 2.1.1: move target_pose from rear wheel center to rear top left corner in order to ensure every point in the first quadrant
   const Eigen::Vector3d rear_top_left_corner_in_target_frame(0, -0.5 * target_size(1), -target_size(2));
   const Eigen::Vector3d rear_top_left_corner_in_ref_frame = target_pose * rear_top_left_corner_in_target_frame;
@@ -240,48 +246,68 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
   PointCloudT::Ptr pcl_in_target_frame(new PointCloudT);
   pcl::transformPointCloud(*pcl_input, *pcl_in_target_frame, target_pose_new.inverse());
   assert(pcl_in_target_frame->size() == pcl_input->size());
-  // step 2.2: assign points 
+  // step 2.2: assign points: O(n) 
   const int pcl_size = pcl_input->size();
   for (int i = 0; i < pcl_size; ++i) {
     const auto& point = pcl_in_target_frame->at(i);
-    const int grid_x = std::max(0, std::min(grid_x_len - 1, static_cast<int>(point.x / downsample_leaf_size))); 
-    const int grid_y = std::max(0, std::min(grid_y_len - 1, static_cast<int>(point.y / downsample_leaf_size))); 
-    const int grid_z = std::max(0, std::min(grid_z_len - 1, static_cast<int>(point.z / downsample_leaf_size))); 
-    const int grid_index = grid_x * grid_y_len * grid_z_len + grid_y * grid_z_len + grid_z;
-    if (map_grid_index_to_points.count(grid_index) == 0) {
-      map_grid_index_to_points[grid_index].reset(new PointCloudT);
-    }
-    map_grid_index_to_points[grid_index]->push_back(pcl_input->at(i));
+    const int small_grid_x = std::max(0, std::min(small_grid_x_len - 1, static_cast<int>(point.x / small_grid_size) + paddle_size)); 
+    const int small_grid_y = std::max(0, std::min(small_grid_y_len - 1, static_cast<int>(point.y / small_grid_size) + paddle_size)); 
+    const int small_grid_z = std::max(0, std::min(small_grid_z_len - 1, static_cast<int>(point.z / small_grid_size) + paddle_size)); 
+    const int small_grid_index = small_grid_x * small_grid_y_len * small_grid_z_len + small_grid_y * small_grid_z_len + small_grid_z;
+    map_small_grid_index_to_point_indexes[small_grid_index].push_back(i);
+
+    const int large_grid_x = std::max(0, std::min(large_grid_x_len - 1, static_cast<int>(point.x / large_grid_size))); 
+    const int large_grid_y = std::max(0, std::min(large_grid_y_len - 1, static_cast<int>(point.y / large_grid_size))); 
+    const int large_grid_z = std::max(0, std::min(large_grid_z_len - 1, static_cast<int>(point.z / large_grid_size))); 
+    const int large_grid_index = large_grid_x * large_grid_y_len * large_grid_z_len + large_grid_y * large_grid_z_len + large_grid_z;
+    map_large_grid_index_to_point_indexes[large_grid_index].push_back(i);
   }
   // step 3: analyze each grid info
-  std::multimap<int, int> map_grid_num_to_grid_index;
-  std::multimap<float, int, std::greater<float>> map_mevr_to_grid_index;
-  pcl::PCA<PointT> pca(true);
-  int max_nnn = -1;
+  // step 3.1: analyze mevr for each large grid
+  std::multimap<float, int, std::greater<float>> map_mevr_to_large_grid_index;
   float max_mevr = -1;
-  for (const auto& grid_info : map_grid_index_to_points) {
-    const auto grid_points = grid_info.second;
-    const int grid_index = grid_info.first;
-    const int grid_num = grid_points->size();
-    if (grid_num > 4) {
-      pca.setInputCloud(grid_points);
-      const Eigen::Vector3f eigen_values = pca.getEigenValues();
-      assert(eigen_values(0) + eigen_values(1) > 1.0e-6);
-      const float mevr = eigen_values(2) / (eigen_values(0) + eigen_values(1));
-      map_mevr_to_grid_index.insert({mevr, grid_index});
+  for (const auto& large_grid_info : map_large_grid_index_to_point_indexes) {
+    const int large_grid_index = large_grid_info.first;
+    const auto large_grid_point_indexes = large_grid_info.second;
+    const int large_grid_num = large_grid_point_indexes.size();
+    if (large_grid_num > 4) {
+      const Eigen::Vector3d eigen_values = EigenValuesOfPclDistribution(pcl_input, large_grid_point_indexes);
+      assert(eigen_values(1) + eigen_values(2) > 1.0e-6);
+      const float mevr = eigen_values(0) / (eigen_values(1) + eigen_values(2));
+      map_mevr_to_large_grid_index.insert({mevr, large_grid_index});
       max_mevr = std::max(max_mevr, mevr);
     }
-    map_grid_num_to_grid_index.insert({grid_num, grid_index}); 
-    max_nnn = std::max(max_nnn, grid_num);
   } 
-  // step 4: select valid grid points as contour points (mevr is large enough || nnn is small enough) 
-  assert(pcl_output);
-  std::unordered_set<int> valid_grid_indexes;
+  // step 3.2: analyze nnn for each small grid (O(n))
+  std::multimap<int, int> map_nnn_to_small_grid_index;
+  int max_nnn = -1;
+  for (const auto& small_grid_info : map_small_grid_index_to_point_indexes) {
+    const int small_grid_index = small_grid_info.first;
+    int nnn = 0;
+    for (int x = -1; x < 2; ++x) {
+      for (int y = -1; y < 2; ++y) {
+        for (int z = -1; z < 2; ++z) {
+          const int neighbor_small_grid_index = small_grid_index + x * small_grid_y_len * small_grid_z_len + y * small_grid_z_len + z;
+          if (map_small_grid_index_to_point_indexes.count(neighbor_small_grid_index)) {
+            nnn += map_small_grid_index_to_point_indexes[neighbor_small_grid_index].size();
+          }
+        }
+      }
+    }    
+    const int point_index = small_grid_info.second.front();
+    const auto& point = pcl_input->at(point_index);
+    const double dist_sq = point.x * point.x + point.y * point.y + point.z * point.z; 
+    nnn *= dist_sq;
+    map_nnn_to_small_grid_index.insert({nnn, small_grid_index});
+    max_nnn = std::max(max_nnn, nnn);
+  } 
+  // step 4: select valid small_grid points as contour points (mevr is large enough || nnn is small enough) 
+  std::unordered_set<int> selected_indexes;
   if (config->kMevrSelect) {
     const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
-    float last_mevr = map_mevr_to_grid_index.begin()->first;
+    float last_mevr = map_mevr_to_large_grid_index.begin()->first;
     std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
-    for (const auto& item : map_mevr_to_grid_index) {
+    for (const auto& item : map_mevr_to_large_grid_index) {
       const float mevr = item.first;
       if (mevr < mevr_th) {
         std::cout << "mevr < mevr_th: " << mevr << " < " << mevr_th << std::endl;  
@@ -291,41 +317,68 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
         std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
         break;  
       } 
-      if (pcl_output->size() >= config->kMevrSelectNumUpBound) {
-        std::cout << "selected_indexes.size() >= 100: " << pcl_output->size() << "/" << mevr << std::endl;
+      if (selected_indexes.size() >= config->kMevrSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 100: " << selected_indexes.size() << "/" << mevr << std::endl;
         break;
       }
-      const int grid_index = item.second;
-      valid_grid_indexes.insert(grid_index);
-      *pcl_output += *(map_grid_index_to_points[grid_index]);
+      const int large_grid_index = item.second;
+      const auto point_indexes = map_large_grid_index_to_point_indexes[large_grid_index];
+      for (const auto& point_index : point_indexes) {
+        selected_indexes.insert(point_index);
+      }
       last_mevr = mevr;
     }
   }
-  const int mevr_select_num = pcl_output->size();
+  const int mevr_select_num = selected_indexes.size();
   std::cout << "mevr select " << mevr_select_num << std::endl;
   if (config->kNnnSelect) {
     const int nnn_th = config->kNnnThRatio * max_nnn;
     std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
-    for (const auto& item : map_grid_num_to_grid_index) {
+    for (const auto& item : map_nnn_to_small_grid_index) {
       const int nnn = item.first;
       if (nnn > nnn_th) {
         std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
         break;
       }
-      if (pcl_output->size() >= config->kAllSelectNumUpBound) {
-        std::cout << "selected_indexes.size() >= 200: " << pcl_output->size() << "/" << nnn  << std::endl;
+      if (selected_indexes.size() >= config->kAllSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
         break;
       }
-      const int grid_index = item.second;
-      if (valid_grid_indexes.count(grid_index)) {
-        continue;
+      const int small_grid_index = item.second;
+      const auto point_indexes = map_small_grid_index_to_point_indexes[small_grid_index];
+      for (const auto& point_index : point_indexes) {
+        selected_indexes.insert(point_index);
       }
-      *pcl_output += *(map_grid_index_to_points[grid_index]);
     }
   }
-  const int nnn_select_num = pcl_output->size() - mevr_select_num;
+  const int nnn_select_num = selected_indexes.size() - mevr_select_num;
   std::cout << "nnn select " << nnn_select_num << std::endl;
-  
+  // step 5: make output
+  assert(pcl_output);
+  for (const auto& index : selected_indexes) {
+    pcl_output->push_back(pcl_input->at(index));
+  }
+}
+
+
+Eigen::Vector3d PclAlignment::EigenValuesOfPclDistribution(PointCloudT::ConstPtr pcl, const std::list<int> indexes) {
+  assert(indexes.size() > 4);
+  Eigen::Vector3d mean(0.0, 0.0, 0.0);
+  for (const auto idx : indexes) {
+    const auto& point = pcl->at(idx);
+    const Eigen::Vector3d p(point.x, point.y, point.z);
+    mean += p; 
+  }
+  mean /= indexes.size();
+  Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
+  for (const auto idx : indexes) {
+    const auto& point = pcl->at(idx);
+    const Eigen::Vector3d p(point.x, point.y, point.z);
+    const Eigen::Vector3d diff = mean - p;
+    cov += diff * diff.transpose();
+  }
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver (cov);
+  return solver.eigenvalues(); 
 }
 
 void PclAlignment::DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
