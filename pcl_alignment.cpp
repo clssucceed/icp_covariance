@@ -5,6 +5,7 @@
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/common/pca.h>
 
 #include "utils.h"
 #include "time_analysis.h"
@@ -78,9 +79,11 @@ void PclAlignment::Downsample() {
   auto config = icp_cov::Config::Instance();
   if (config->kDownsample) {
     pcl1_downsampled_.reset(new PointCloudT);
-    DownsampleWithPclApi(pcl1_, pcl1_downsampled_);
     pcl2_downsampled_.reset(new PointCloudT);
+    DownsampleWithPclApi(pcl1_, pcl1_downsampled_);
     DownsampleWithPclApi(pcl2_, pcl2_downsampled_);
+    // DownsampleOutputOrganizedPcl(pcl1_, pcl1_pose_, config->kTargetSize, pcl1_downsampled_);
+    // DownsampleOutputOrganizedPcl(pcl2_, pcl2_pose_, config->kTargetSize, pcl2_downsampled_);
   } else {
     pcl1_downsampled_ = pcl1_;
     pcl2_downsampled_ = pcl2_;
@@ -98,13 +101,17 @@ void PclAlignment::DownsampleWithPclApi(PointCloudT::ConstPtr pcl_input, PointCl
   downsample.filter(*pcl_output);
 }
 
+
+
 void PclAlignment::DetectKeyPoint() {
   auto config = icp_cov::Config::Instance();
   if (config->kEdgeDetection) {
     pcl1_key_points_.reset(new PointCloudT);
     pcl2_key_points_.reset(new PointCloudT);
-    DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
-    DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+    // DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
+    // DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+    DetectContour(pcl1_downsampled_, pcl1_pose_, config->kTargetSize, pcl1_key_points_);
+    DetectContour(pcl2_downsampled_, pcl2_pose_, config->kTargetSize, pcl2_key_points_);
   } else {
     pcl1_key_points_ = pcl1_downsampled_;
     pcl2_key_points_ = pcl2_downsampled_;
@@ -212,6 +219,113 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   for (const auto& index : selected_indexes) {
     pcl_output->push_back(pcl_input->at(index));
   }
+}
+
+void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::Affine3d& target_pose, const Eigen::Vector3d& target_size, PointCloudT::Ptr pcl_output) {
+  auto config = icp_cov::Config::Instance();
+  const double downsample_leaf_size = config->kLeafSize * config->kRadiusRatio;
+  assert(downsample_leaf_size > 1.0e-3);
+  // step 1: init grid info
+  const int grid_x_len = static_cast<int>(target_size(0) / downsample_leaf_size) + 1; 
+  const int grid_y_len = static_cast<int>(target_size(1) / downsample_leaf_size) + 1; 
+  const int grid_z_len = static_cast<int>(target_size(2) / downsample_leaf_size) + 1; 
+  std::unordered_map<int, PointCloudT::Ptr> map_grid_index_to_points;
+  // step 2: assign each point to grid
+  // step 2.1: transform point cloud to target frame
+  // step 2.1.1: move target_pose from rear wheel center to rear top left corner in order to ensure every point in the first quadrant
+  const Eigen::Vector3d rear_top_left_corner_in_target_frame(0, -0.5 * target_size(1), -target_size(2));
+  const Eigen::Vector3d rear_top_left_corner_in_ref_frame = target_pose * rear_top_left_corner_in_target_frame;
+  const Eigen::Affine3d target_pose_new = icp_cov::utils::RtToAffine3d(target_pose.rotation(), rear_top_left_corner_in_ref_frame); 
+  // step 2.1.2: transform points
+  PointCloudT::Ptr pcl_in_target_frame(new PointCloudT);
+  pcl::transformPointCloud(*pcl_input, *pcl_in_target_frame, target_pose_new.inverse());
+  assert(pcl_in_target_frame->size() == pcl_input->size());
+  // step 2.2: assign points 
+  const int pcl_size = pcl_input->size();
+  for (int i = 0; i < pcl_size; ++i) {
+    const auto& point = pcl_in_target_frame->at(i);
+    const int grid_x = std::max(0, std::min(grid_x_len - 1, static_cast<int>(point.x / downsample_leaf_size))); 
+    const int grid_y = std::max(0, std::min(grid_y_len - 1, static_cast<int>(point.y / downsample_leaf_size))); 
+    const int grid_z = std::max(0, std::min(grid_z_len - 1, static_cast<int>(point.z / downsample_leaf_size))); 
+    const int grid_index = grid_x * grid_y_len * grid_z_len + grid_y * grid_z_len + grid_z;
+    if (map_grid_index_to_points.count(grid_index) == 0) {
+      map_grid_index_to_points[grid_index].reset(new PointCloudT);
+    }
+    map_grid_index_to_points[grid_index]->push_back(pcl_input->at(i));
+  }
+  // step 3: analyze each grid info
+  std::multimap<int, int> map_grid_num_to_grid_index;
+  std::multimap<float, int, std::greater<float>> map_mevr_to_grid_index;
+  pcl::PCA<PointT> pca(true);
+  int max_nnn = -1;
+  float max_mevr = -1;
+  for (const auto& grid_info : map_grid_index_to_points) {
+    const auto grid_points = grid_info.second;
+    const int grid_index = grid_info.first;
+    const int grid_num = grid_points->size();
+    if (grid_num > 4) {
+      pca.setInputCloud(grid_points);
+      const Eigen::Vector3f eigen_values = pca.getEigenValues();
+      assert(eigen_values(0) + eigen_values(1) > 1.0e-6);
+      const float mevr = eigen_values(2) / (eigen_values(0) + eigen_values(1));
+      map_mevr_to_grid_index.insert({mevr, grid_index});
+      max_mevr = std::max(max_mevr, mevr);
+    }
+    map_grid_num_to_grid_index.insert({grid_num, grid_index}); 
+    max_nnn = std::max(max_nnn, grid_num);
+  } 
+  // step 4: select valid grid points as contour points (mevr is large enough || nnn is small enough) 
+  assert(pcl_output);
+  std::unordered_set<int> valid_grid_indexes;
+  if (config->kMevrSelect) {
+    const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
+    float last_mevr = map_mevr_to_grid_index.begin()->first;
+    std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
+    for (const auto& item : map_mevr_to_grid_index) {
+      const float mevr = item.first;
+      if (mevr < mevr_th) {
+        std::cout << "mevr < mevr_th: " << mevr << " < " << mevr_th << std::endl;  
+        break;
+      }
+      if (last_mevr > 5 * mevr) {
+        std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
+        break;  
+      } 
+      if (pcl_output->size() >= config->kMevrSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 100: " << pcl_output->size() << "/" << mevr << std::endl;
+        break;
+      }
+      const int grid_index = item.second;
+      valid_grid_indexes.insert(grid_index);
+      *pcl_output += *(map_grid_index_to_points[grid_index]);
+      last_mevr = mevr;
+    }
+  }
+  const int mevr_select_num = pcl_output->size();
+  std::cout << "mevr select " << mevr_select_num << std::endl;
+  if (config->kNnnSelect) {
+    const int nnn_th = config->kNnnThRatio * max_nnn;
+    std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
+    for (const auto& item : map_grid_num_to_grid_index) {
+      const int nnn = item.first;
+      if (nnn > nnn_th) {
+        std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
+        break;
+      }
+      if (pcl_output->size() >= config->kAllSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 200: " << pcl_output->size() << "/" << nnn  << std::endl;
+        break;
+      }
+      const int grid_index = item.second;
+      if (valid_grid_indexes.count(grid_index)) {
+        continue;
+      }
+      *pcl_output += *(map_grid_index_to_points[grid_index]);
+    }
+  }
+  const int nnn_select_num = pcl_output->size() - mevr_select_num;
+  std::cout << "nnn select " << nnn_select_num << std::endl;
+  
 }
 
 void PclAlignment::DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
