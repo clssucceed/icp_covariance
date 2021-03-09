@@ -138,12 +138,16 @@ Config::Config() {
   std::cout << "edge_detection: " << kEdgeDetection << std::endl;
   kRadiusRatio = yaml_node_["radius_ratio"].as<double>();
   std::cout << "radius_ratio: " << kRadiusRatio << std::endl;
+  kMevrSelect = yaml_node_["mevr_select"].as<bool>();
+  std::cout << "mevr_select: " << kMevrSelect << std::endl;
   kMevrThRatio = yaml_node_["mevr_th_ratio"].as<double>();
   std::cout << "mevr_th_ratio: " << kMevrThRatio << std::endl;
   kMevrThLowBound = yaml_node_["mevr_th_low_bound"].as<double>();
   std::cout << "mevr_th_low_bound: " << kMevrThLowBound << std::endl;
   kMevrSelectNumUpBound = yaml_node_["mevr_select_num_up_bound"].as<int>();
   std::cout << "mevr_select_num_up_bound: " << kMevrSelectNumUpBound << std::endl;
+  kNnnSelect = yaml_node_["nnn_select"].as<bool>();
+  std::cout << "nnn_select: " << kNnnSelect << std::endl;
   kNnnThRatio = yaml_node_["nnn_th_ratio"].as<double>();
   std::cout << "nnn_th_ratio: " << kNnnThRatio << std::endl;
   kAllSelectNumUpBound = yaml_node_["all_select_num_up_bound"].as<int>();

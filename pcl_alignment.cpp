@@ -156,40 +156,44 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   // step 2: detect point: mevr is large enough || nnn is small enough
   assert(pcl_output);
   std::unordered_set<int> selected_indexes;
-  const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
-  float last_mevr = map_mevr_to_index.begin()->first;
-  std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
-  for (const auto& item : map_mevr_to_index) {
-    const float mevr = item.first;
-    if (mevr < mevr_th) {
-      std::cout << "mevr < mevr_th: " << mevr << " < " << mevr_th << std::endl;  
-      break;
+  if (config->kMevrSelect) {
+    const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
+    float last_mevr = map_mevr_to_index.begin()->first;
+    std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
+    for (const auto& item : map_mevr_to_index) {
+      const float mevr = item.first;
+      if (mevr < mevr_th) {
+        std::cout << "mevr < mevr_th: " << mevr << " < " << mevr_th << std::endl;  
+        break;
+      }
+      if (last_mevr > 5 * mevr) {
+        std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
+        break;  
+      } 
+      if (selected_indexes.size() >= config->kMevrSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 100: " << selected_indexes.size() << "/" << mevr << std::endl;
+        break;
+      }
+      selected_indexes.insert(item.second);
+      last_mevr = mevr;
     }
-    if (last_mevr > 5 * mevr) {
-      std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
-      break;  
-    } 
-    if (selected_indexes.size() >= config->kMevrSelectNumUpBound) {
-      std::cout << "selected_indexes.size() >= 100: " << selected_indexes.size() << "/" << mevr << std::endl;
-      break;
-    }
-    selected_indexes.insert(item.second);
-    last_mevr = mevr;
   }
   const int mevr_select_num = selected_indexes.size();
   std::cout << "mevr select " << mevr_select_num << std::endl;
-  const int nnn_th = config->kNnnThRatio * max_nnn;
-  std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
-  for (const auto& item : map_nnn_to_index) {
-    const int nnn = item.first;
-    if (nnn > nnn_th) {
-      std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
-      break;
+  if (config->kNnnSelect) {
+    const int nnn_th = config->kNnnThRatio * max_nnn;
+    std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
+    for (const auto& item : map_nnn_to_index) {
+      const int nnn = item.first;
+      if (nnn > nnn_th) {
+        std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
+        break;
+      }
+      if (selected_indexes.size() >= config->kAllSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
+      }
+      selected_indexes.insert(item.second);
     }
-    if (selected_indexes.size() >= config->kAllSelectNumUpBound) {
-      std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
-    }
-    selected_indexes.insert(item.second);
   }
   const int nnn_select_num = selected_indexes.size() - mevr_select_num;
   std::cout << "nnn select " << nnn_select_num << std::endl;

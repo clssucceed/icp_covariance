@@ -48,9 +48,11 @@ class Config {
   // edge detection
   bool kEdgeDetection;
   double kRadiusRatio;
+  bool kMevrSelect;
   double kMevrThRatio;
   double kMevrThLowBound;
   int kMevrSelectNumUpBound;
+  bool kNnnSelect;
   double kNnnThRatio;
   int kAllSelectNumUpBound;
   // others
