@@ -75,26 +75,27 @@ void PclAlignment::Align() {
 }
 
 void PclAlignment::Downsample() {
-  assert(pcl1_);
-  assert(pcl2_);
   auto config = icp_cov::Config::Instance();
   if (config->kDownsample) {
-    pcl::VoxelGrid<PointT> downsample1;
-    downsample1.setInputCloud(pcl1_);
-    downsample1.setLeafSize(config->kLeafSize, config->kLeafSize, config->kLeafSize);
     pcl1_downsampled_.reset(new PointCloudT);
-    downsample1.filter(*pcl1_downsampled_);
-    
-    pcl::VoxelGrid<PointT> downsample2;
-    downsample2.setInputCloud(pcl2_);
-    downsample2.setLeafSize(config->kLeafSize, config->kLeafSize, config->kLeafSize);
+    DownsampleWithPclApi(pcl1_, pcl1_downsampled_);
     pcl2_downsampled_.reset(new PointCloudT);
-    downsample2.filter(*pcl2_downsampled_);
+    DownsampleWithPclApi(pcl2_, pcl2_downsampled_);
   } else {
     pcl1_downsampled_ = pcl1_;
-    pcl2_downsampled_ = pcl2_;  
+    pcl2_downsampled_ = pcl2_;
   }
   std::cout << "downsampled_pcl_size: " << pcl1_downsampled_->size() << "/" << pcl2_downsampled_->size() << std::endl;
+}
+
+void PclAlignment::DownsampleWithPclApi(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
+  assert(pcl_input);
+  assert(pcl_output);
+  auto config = icp_cov::Config::Instance();
+  pcl::VoxelGrid<PointT> downsample;
+  downsample.setInputCloud(pcl_input);
+  downsample.setLeafSize(config->kLeafSize, config->kLeafSize, config->kLeafSize);
+  downsample.filter(*pcl_output);
 }
 
 void PclAlignment::DetectKeyPoint() {

@@ -52,6 +52,7 @@ class PclAlignment {
 
  private:
   void Downsample();
+  void DownsampleWithPclApi(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void DetectKeyPoint();
   void DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
