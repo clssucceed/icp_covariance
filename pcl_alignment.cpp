@@ -191,6 +191,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
       }
       if (selected_indexes.size() >= config->kAllSelectNumUpBound) {
         std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
+        break;
       }
       selected_indexes.insert(item.second);
     }
