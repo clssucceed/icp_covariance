@@ -75,7 +75,7 @@ initial_translation_noise: 0.2 #unit: m
 
 # downsample
 downsample: true
-leaf_size: 0.2 #unit: m
+leaf_size: 0.25 #unit: m
 
 # edge detection
 edge_detection: true
