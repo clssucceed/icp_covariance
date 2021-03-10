@@ -102,8 +102,6 @@ void PclAlignment::DownsampleWithPclApi(PointCloudT::ConstPtr pcl_input, PointCl
   downsample.filter(*pcl_output);
 }
 
-
-
 void PclAlignment::DetectKeyPoint() {
   auto config = icp_cov::Config::Instance();
   if (config->kEdgeDetection) {
@@ -121,7 +119,12 @@ void PclAlignment::DetectKeyPoint() {
 }
 
 void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
-  DetectEdgePoint(pcl_input, pcl_output);
+  auto config = icp_cov::Config::Instance();
+  if (config->kApproxMevr) {
+    DetectEdgePointApproxMevr(pcl_input, pcl_output);
+  } else {
+    DetectEdgePoint(pcl_input, pcl_output);
+  }
 }
 
 void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
@@ -200,6 +203,132 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   assert(map_mevr_to_index.size() == pcl_size);
   assert(nnn_vec.size() == pcl_size);
   assert(mevr_vec.size() == pcl_size);
+  // step 2: detect point: mevr is large enough || nnn is small enough
+  assert(pcl_output);
+  std::unordered_set<int> selected_indexes;
+  TimeAnalysis mevr_select_cost;
+  if (config->kMevrSelect) {
+    const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
+    float last_mevr = map_mevr_to_index.begin()->first;
+    std::cout << "max_mevr = " << max_mevr << ", mevr_th = " << mevr_th << std::endl;
+    for (const auto& item : map_mevr_to_index) {
+      const float mevr = item.first;
+      if (mevr < mevr_th) {
+        std::cout << "mevr < mevr_th: " << mevr << " < " << mevr_th << std::endl;  
+        break;
+      }
+      if (last_mevr > 5 * mevr) {
+        std::cout << "last_mevr > 5 * mevr: " << last_mevr << " > 5 * " << mevr << std::endl;
+        break;  
+      } 
+      if (selected_indexes.size() >= config->kMevrSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 100: " << selected_indexes.size() << "/" << mevr << std::endl;
+        break;
+      }
+      selected_indexes.insert(item.second);
+      last_mevr = mevr;
+    }
+  }
+  const int mevr_select_num = selected_indexes.size();
+  std::cout << "mevr select " << mevr_select_num << std::endl;
+  mevr_select_cost.Stop("mevr_select_cost");
+  TimeAnalysis nnn_select_cost;
+  if (config->kNnnSelect) {
+    const int nnn_th = config->kNnnThRatio * max_nnn;
+    std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
+    for (const auto& item : map_nnn_to_index) {
+      const int nnn = item.first;
+      if (nnn > nnn_th) {
+        std::cout << "nnn > nnn_th: " << nnn << " > " << nnn_th << std::endl;
+        break;
+      }
+      if (selected_indexes.size() >= config->kAllSelectNumUpBound) {
+        std::cout << "selected_indexes.size() >= 200: " << selected_indexes.size() << "/" << nnn  << std::endl;
+        break;
+      }
+      selected_indexes.insert(item.second);
+    }
+  }
+  const int nnn_select_num = selected_indexes.size() - mevr_select_num;
+  std::cout << "nnn select " << nnn_select_num << std::endl;
+  nnn_select_cost.Stop("nnn_select_cost");
+  TimeAnalysis make_output_cost;
+  assert(pcl_output);
+  for (const auto& index : selected_indexes) {
+    pcl_output->push_back(pcl_input->at(index));
+  }
+  make_output_cost.Stop("make_output_cost");
+}
+
+void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
+  // step 1: preparation: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
+  // step 1.1: some initialization
+  auto config = icp_cov::Config::Instance();
+  TimeAnalysis construct_kdtree_cost;
+  pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+  kdtree.setInputCloud (pcl_input);
+  construct_kdtree_cost.Stop("construct_kdtree_cost");
+  const int pcl_size = pcl_input->size();
+  std::multimap<int, int> map_nnn_to_index;
+  std::multimap<float, int, std::greater<float>> map_mevr_to_index;
+  std::vector<int> pointIdxRadiusSearch;
+  std::vector<float> pointRadiusSquaredDistance;
+  int max_nnn = -1;
+  float max_mevr = -1.0;
+  const float radius = config->kLeafSize * config->kRadiusRatio;
+  TimeAnalysis calc_mevr_and_nnn_cost; 
+  // step 1.2: reformat pcl_input to speed up pca
+  TimeAnalysis reformat_pcl_input_cost;
+  std::vector<Eigen::Vector3d> input_points_vector(pcl_size);
+  // psq: (px*px, py*py, pz*pz); p is input point
+  std::vector<Eigen::Vector3d> input_points_psq_vector(pcl_size); 
+  for (int i = 0; i < pcl_size; ++i) {
+    const auto& point = pcl_input->at(i);
+    input_points_vector.at(i)(0) = point.x;
+    input_points_vector.at(i)(1) = point.y;
+    input_points_vector.at(i)(2) = point.z;
+    input_points_psq_vector.at(i)(0) = point.x * point.x;
+    input_points_psq_vector.at(i)(1) = point.y * point.y;
+    input_points_psq_vector.at(i)(2) = point.z * point.z;
+  }
+  reformat_pcl_input_cost.Stop("reformat_pcl_input_cost");
+  // step 1.3: calc mevr and nnn 
+  Eigen::Vector3d sum;
+  Eigen::Vector3d cov_diag;
+  for (int i = 0; i < pcl_size; ++i) {
+    pointIdxRadiusSearch.clear();
+    pointRadiusSquaredDistance.clear();
+    TimeAnalysis kdtree_search_cost;
+    const int nnn = kdtree.radiusSearch(pcl_input->at(i), radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
+    kdtree_search_cost.Stop("kdtree_search_cost");
+    assert(nnn > 0); 
+    assert(nnn == pointIdxRadiusSearch.size());
+    assert(nnn == pointRadiusSquaredDistance.size());
+    cov_diag.setZero();
+    sum.setZero();
+    TimeAnalysis calc_mevr_cost;
+    TimeAnalysis calc_cov_cost;
+    for (const auto idx : pointIdxRadiusSearch) {
+      sum += input_points_vector.at(idx);
+      cov_diag += input_points_psq_vector.at(idx);
+    }
+    cov_diag += nnn * input_points_psq_vector.at(i); 
+    cov_diag(0) -= sum(0) * input_points_vector.at(i)(0) * 2;
+    cov_diag(1) -= sum(1) * input_points_vector.at(i)(1) * 2;
+    cov_diag(2) -= sum(2) * input_points_vector.at(i)(2) * 2;
+    const double min_cov_diag = std::min(cov_diag(0), std::min(cov_diag(1), cov_diag(2)));
+    calc_cov_cost.Stop("calc_cov_cost");
+    const double cov_diag_sum = cov_diag(0) + cov_diag(1) + cov_diag(2);
+    const float mevr = min_cov_diag / cov_diag_sum;
+    calc_mevr_cost.Stop("calc_mevr_cost");
+    map_nnn_to_index.insert({nnn, i});
+    map_mevr_to_index.insert({mevr, i});
+    max_nnn = std::max(max_nnn, nnn);
+    max_mevr = std::max(max_mevr, mevr);
+  }
+  calc_mevr_and_nnn_cost.Stop("calc_mevr_and_nnn_cost");
+  assert(map_nnn_to_index.size() == pcl_size);
+  assert(map_mevr_to_index.size() == pcl_size);
   // step 2: detect point: mevr is large enough || nnn is small enough
   assert(pcl_output);
   std::unordered_set<int> selected_indexes;

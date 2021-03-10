@@ -84,6 +84,7 @@ mevr_select: true
 mevr_th_ratio: 0.4
 mevr_th_low_bound: 0.05
 mevr_select_num_up_bound: 100
+approx_mevr: true
 nnn_select: true
 nnn_th_ratio: 0.6
 all_select_num_up_bound: 200

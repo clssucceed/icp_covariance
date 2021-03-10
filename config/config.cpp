@@ -146,6 +146,8 @@ Config::Config() {
   std::cout << "mevr_th_low_bound: " << kMevrThLowBound << std::endl;
   kMevrSelectNumUpBound = yaml_node_["mevr_select_num_up_bound"].as<int>();
   std::cout << "mevr_select_num_up_bound: " << kMevrSelectNumUpBound << std::endl;
+  kApproxMevr = yaml_node_["approx_mevr"].as<bool>();
+  std::cout << "approx_mevr: " << kApproxMevr << std::endl;
   kNnnSelect = yaml_node_["nnn_select"].as<bool>();
   std::cout << "nnn_select: " << kNnnSelect << std::endl;
   kNnnThRatio = yaml_node_["nnn_th_ratio"].as<double>();

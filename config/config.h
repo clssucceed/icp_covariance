@@ -52,6 +52,7 @@ class Config {
   double kMevrThRatio;
   double kMevrThLowBound;
   int kMevrSelectNumUpBound;
+  bool kApproxMevr;
   bool kNnnSelect;
   double kNnnThRatio;
   int kAllSelectNumUpBound;

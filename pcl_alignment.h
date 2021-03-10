@@ -58,6 +58,7 @@ class PclAlignment {
   void DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void DetectISS(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   void DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
+  void DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output);
   // points in grid which has little points or corner points
   void DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::Affine3d& target_pose, const Eigen::Vector3d& target_size, PointCloudT::Ptr pcl_output);
   void EigenPclToPcl(const EigenPointCloud& eigen_pcl, PointCloudT::Ptr& pcl);
