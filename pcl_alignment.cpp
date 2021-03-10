@@ -14,6 +14,7 @@
 #include <thread>
 #include <chrono>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace icp_cov {
 PclAlignment* PclAlignment::pcl_alignment_ = nullptr;
@@ -225,7 +226,7 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
   auto config = icp_cov::Config::Instance();
   // step 1: init grid info
   const double small_grid_size = config->kLeafSize;
-  const double large_grid_size = config->kRadiusRatio * small_grid_size;
+  const double large_grid_size = config->kLeafSize * config->kRadiusRatio;
   const int paddle_size = 2;
   assert(small_grid_size > 1.0e-3);
   const int small_grid_x_len = static_cast<int>(target_size(0) / small_grid_size) + 1 + 2 * paddle_size; 
@@ -243,11 +244,14 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
   const Eigen::Vector3d rear_top_left_corner_in_ref_frame = target_pose * rear_top_left_corner_in_target_frame;
   const Eigen::Affine3d target_pose_new = icp_cov::utils::RtToAffine3d(target_pose.rotation(), rear_top_left_corner_in_ref_frame); 
   // step 2.1.2: transform points
+  TimeAnalysis transform_points_cost;
   PointCloudT::Ptr pcl_in_target_frame(new PointCloudT);
   pcl::transformPointCloud(*pcl_input, *pcl_in_target_frame, target_pose_new.inverse());
   assert(pcl_in_target_frame->size() == pcl_input->size());
+  transform_points_cost.Stop("transform_points_cost");
   // step 2.2: assign points: O(n) 
   const int pcl_size = pcl_input->size();
+  TimeAnalysis assign_points_cost;
   for (int i = 0; i < pcl_size; ++i) {
     const auto& point = pcl_in_target_frame->at(i);
     const int small_grid_x = std::max(0, std::min(small_grid_x_len - 1, static_cast<int>(point.x / small_grid_size) + paddle_size)); 
@@ -262,8 +266,10 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
     const int large_grid_index = large_grid_x * large_grid_y_len * large_grid_z_len + large_grid_y * large_grid_z_len + large_grid_z;
     map_large_grid_index_to_point_indexes[large_grid_index].push_back(i);
   }
+  assign_points_cost.Stop("assign_points_cost");
   // step 3: analyze each grid info
   // step 3.1: analyze mevr for each large grid
+  TimeAnalysis analyze_mevr_cost;
   std::multimap<float, int, std::greater<float>> map_mevr_to_large_grid_index;
   float max_mevr = -1;
   for (const auto& large_grid_info : map_large_grid_index_to_point_indexes) {
@@ -278,31 +284,52 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
       max_mevr = std::max(max_mevr, mevr);
     }
   } 
+  std::cout << "map_large_grid_index_to_point_indexes.size = " 
+            << map_large_grid_index_to_point_indexes.size() << std::endl;
+  analyze_mevr_cost.Stop("analyze_mevr_cost");
   // step 3.2: analyze nnn for each small grid (O(n))
-  std::multimap<int, int> map_nnn_to_small_grid_index;
-  int max_nnn = -1;
+  TimeAnalysis analyze_nnn_cost;
+  std::multimap<double, int> map_nnn_to_small_grid_index;
+  double max_nnn = -1;
+  // const double dist_th_for_hd = config->kLeafSize / (config->kLaserHorizontalAngleResolution * config->kDegToRad);
+  // const double dist_th_for_vd = config->kLeafSize / (config->kLaserVerticalAngleResolution * config->kDegToRad);
+  // const double dist_sq_th = dist_th_for_hd * dist_th_for_vd;
+  // std::cout << "$$$$$$$$$$$$" << dist_th_for_hd << "/" << dist_th_for_vd << std::endl;
   for (const auto& small_grid_info : map_small_grid_index_to_point_indexes) {
     const int small_grid_index = small_grid_info.first;
-    int nnn = 0;
+    const int point_index = small_grid_info.second.front();
+    const auto& current_point = pcl_input->at(point_index);
+    double nnn = 0;
+    double min_dist_sq = 1.0;
     for (int x = -1; x < 2; ++x) {
       for (int y = -1; y < 2; ++y) {
         for (int z = -1; z < 2; ++z) {
           const int neighbor_small_grid_index = small_grid_index + x * small_grid_y_len * small_grid_z_len + y * small_grid_z_len + z;
           if (map_small_grid_index_to_point_indexes.count(neighbor_small_grid_index)) {
             nnn += map_small_grid_index_to_point_indexes[neighbor_small_grid_index].size();
+            const auto& neighbor_point = pcl_input->at(
+              map_small_grid_index_to_point_indexes[neighbor_small_grid_index].front()); 
+            if (!(0 == x && 0 == y && 0 == z)) {
+              min_dist_sq = std::min(min_dist_sq, 
+                std::pow(current_point.x - neighbor_point.x, 2) + 
+                std::pow(current_point.y - neighbor_point.y, 2) + 
+                std::pow(current_point.z - neighbor_point.z, 2));
+            }
           }
         }
       }
     }    
-    const int point_index = small_grid_info.second.front();
-    const auto& point = pcl_input->at(point_index);
-    const double dist_sq = point.x * point.x + point.y * point.y + point.z * point.z; 
-    nnn *= dist_sq;
+    // const double dist_sq = current_point.x * current_point.x + current_point.y * current_point.y + current_point.z * current_point.z; 
+    // nnn *= std::max(dist_sq, dist_sq_th);
+    // nnn *= dist_sq;
+    nnn *= min_dist_sq; 
     map_nnn_to_small_grid_index.insert({nnn, small_grid_index});
     max_nnn = std::max(max_nnn, nnn);
   } 
+  analyze_nnn_cost.Stop("analyze_nnn_cost");
   // step 4: select valid small_grid points as contour points (mevr is large enough || nnn is small enough) 
   std::unordered_set<int> selected_indexes;
+  TimeAnalysis mevr_select_cost;
   if (config->kMevrSelect) {
     const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
     float last_mevr = map_mevr_to_large_grid_index.begin()->first;
@@ -331,6 +358,8 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
   }
   const int mevr_select_num = selected_indexes.size();
   std::cout << "mevr select " << mevr_select_num << std::endl;
+  mevr_select_cost.Stop("mevr_select_cost");
+  TimeAnalysis nnn_select_cost;
   if (config->kNnnSelect) {
     const int nnn_th = config->kNnnThRatio * max_nnn;
     std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
@@ -353,11 +382,14 @@ void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::A
   }
   const int nnn_select_num = selected_indexes.size() - mevr_select_num;
   std::cout << "nnn select " << nnn_select_num << std::endl;
+  nnn_select_cost.Stop("nnn_select_cost");
   // step 5: make output
+  TimeAnalysis make_output_cost;
   assert(pcl_output);
   for (const auto& index : selected_indexes) {
     pcl_output->push_back(pcl_input->at(index));
   }
+  make_output_cost.Stop("make_output_cost");
 }
 
 
@@ -434,8 +466,8 @@ void PclAlignment::Visualization() {
 
   while (!viewer->wasStopped ()) {
     viewer->spinOnce (100);
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(100ms);
+    // using namespace std::chrono_literals;
+    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
   }
 }
 
