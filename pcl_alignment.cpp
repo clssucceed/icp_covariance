@@ -109,10 +109,10 @@ void PclAlignment::DetectKeyPoint() {
   if (config->kEdgeDetection) {
     pcl1_key_points_.reset(new PointCloudT);
     pcl2_key_points_.reset(new PointCloudT);
-    // DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
-    // DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
-    DetectContour(pcl1_downsampled_, pcl1_pose_, config->kTargetSize, pcl1_key_points_);
-    DetectContour(pcl2_downsampled_, pcl2_pose_, config->kTargetSize, pcl2_key_points_);
+    DetectKeyPoint(pcl1_downsampled_, pcl1_key_points_);
+    DetectKeyPoint(pcl2_downsampled_, pcl2_key_points_);
+    // DetectContour(pcl1_downsampled_, pcl1_pose_, config->kTargetSize, pcl1_key_points_);
+    // DetectContour(pcl2_downsampled_, pcl2_pose_, config->kTargetSize, pcl2_key_points_);
   } else {
     pcl1_key_points_ = pcl1_downsampled_;
     pcl2_key_points_ = pcl2_downsampled_;
@@ -127,8 +127,10 @@ void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::
 void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
   // step 1: prepare: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
   auto config = icp_cov::Config::Instance();
+  TimeAnalysis construct_kdtree_cost;
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
   kdtree.setInputCloud (pcl_input);
+  construct_kdtree_cost.Stop("construct_kdtree_cost");
   const int pcl_size = pcl_input->size();
   std::multimap<int, int> map_nnn_to_index;
   std::multimap<float, int, std::greater<float>> map_mevr_to_index;
@@ -140,15 +142,19 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   int max_nnn = -1;
   float max_mevr = -1.0;
   const float radius = config->kLeafSize * config->kRadiusRatio;
+  TimeAnalysis calc_mevr_and_nnn_cost; 
   for (int i = 0; i < pcl_size; ++i) {
     pointIdxRadiusSearch.clear();
     pointRadiusSquaredDistance.clear();
     const auto& current_point = pcl_input->at(i);
+    TimeAnalysis kdtree_search_cost;
     const int nnn = kdtree.radiusSearch(current_point, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
+    kdtree_search_cost.Stop("kdtree_search_cost");
     assert(nnn > 0); 
     assert(nnn == pointIdxRadiusSearch.size());
     assert(nnn == pointRadiusSquaredDistance.size());
     cov.setZero();
+    TimeAnalysis pca_cost;
     const Eigen::Vector3d cp(current_point.x, current_point.y, current_point.z);
     for (const auto idx : pointIdxRadiusSearch) {
       const auto& neighbor_point = pcl_input->at(idx);
@@ -157,7 +163,8 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
       cov += diff * diff.transpose();
     }
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver (cov);
-    const Eigen::Vector3d eigen_values = solver.eigenvalues(); 
+    const Eigen::Vector3d eigen_values = solver.eigenvalues();
+    pca_cost.Stop("pca_cost"); 
     assert(eigen_values(1) + eigen_values(2) > 1.0e-6);
     const float mevr = eigen_values(0) / (eigen_values(1) + eigen_values(2));
     map_nnn_to_index.insert({nnn, i});
@@ -167,6 +174,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
     nnn_vec.push_back(nnn);
     mevr_vec.push_back(mevr);
   }
+  calc_mevr_and_nnn_cost.Stop("calc_mevr_and_nnn_cost");
   assert(map_nnn_to_index.size() == pcl_size);
   assert(map_mevr_to_index.size() == pcl_size);
   assert(nnn_vec.size() == pcl_size);
@@ -174,6 +182,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   // step 2: detect point: mevr is large enough || nnn is small enough
   assert(pcl_output);
   std::unordered_set<int> selected_indexes;
+  TimeAnalysis mevr_select_cost;
   if (config->kMevrSelect) {
     const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
     float last_mevr = map_mevr_to_index.begin()->first;
@@ -198,6 +207,8 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   }
   const int mevr_select_num = selected_indexes.size();
   std::cout << "mevr select " << mevr_select_num << std::endl;
+  mevr_select_cost.Stop("mevr_select_cost");
+  TimeAnalysis nnn_select_cost;
   if (config->kNnnSelect) {
     const int nnn_th = config->kNnnThRatio * max_nnn;
     std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
@@ -216,10 +227,13 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   }
   const int nnn_select_num = selected_indexes.size() - mevr_select_num;
   std::cout << "nnn select " << nnn_select_num << std::endl;
+  nnn_select_cost.Stop("nnn_select_cost");
+  TimeAnalysis make_output_cost;
   assert(pcl_output);
   for (const auto& index : selected_indexes) {
     pcl_output->push_back(pcl_input->at(index));
   }
+  make_output_cost.Stop("make_output_cost");
 }
 
 void PclAlignment::DetectContour(PointCloudT::ConstPtr pcl_input, const Eigen::Affine3d& target_pose, const Eigen::Vector3d& target_size, PointCloudT::Ptr pcl_output) {
