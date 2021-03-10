@@ -166,5 +166,7 @@ Config::Config() {
   kPclAlignmentVisualization = yaml_node_["pcl_alignment_visualization"].as<bool>();
   std::cout << "pcl_alignment_visualization: " << static_cast<int>(kPclAlignmentVisualization)
             << std::endl;
+  kDebugLog = yaml_node_["debug_log"].as<bool>();
+  std::cout << "debug_log: " << static_cast<int>(kDebugLog) << std::endl;
 }
 }  // namespace icp_cov

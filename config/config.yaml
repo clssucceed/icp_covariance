@@ -93,4 +93,5 @@ all_select_num_up_bound: 200
 delta_time_between_two_frame: 0.1 #unit: sec
 generate_3d_data: true
 pcl_alignment_visualization: false
+debug_log: false
 

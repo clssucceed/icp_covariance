@@ -60,6 +60,7 @@ class Config {
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;
   bool kPclAlignmentVisualization;
+  bool kDebugLog;
 
  private:
   static Config* config_;

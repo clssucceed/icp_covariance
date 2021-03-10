@@ -264,7 +264,8 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   // step 1: preparation: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
   // step 1.1: some initialization
   auto config = icp_cov::Config::Instance();
-  TimeAnalysis construct_kdtree_cost;
+  const auto debug_log = config->kDebugLog;
+  TimeAnalysis construct_kdtree_cost(debug_log);
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
   kdtree.setInputCloud (pcl_input);
   construct_kdtree_cost.Stop("construct_kdtree_cost");
@@ -276,9 +277,9 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   int max_nnn = -1;
   float max_mevr = -1.0;
   const float radius = config->kLeafSize * config->kRadiusRatio;
-  TimeAnalysis calc_mevr_and_nnn_cost; 
+  TimeAnalysis calc_mevr_and_nnn_cost(debug_log); 
   // step 1.2: reformat pcl_input to speed up pca
-  TimeAnalysis reformat_pcl_input_cost;
+  TimeAnalysis reformat_pcl_input_cost(debug_log);
   std::vector<Eigen::Vector3d> input_points_vector(pcl_size);
   // psq: (px*px, py*py, pz*pz); p is input point
   std::vector<Eigen::Vector3d> input_points_psq_vector(pcl_size); 
@@ -298,7 +299,7 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   for (int i = 0; i < pcl_size; ++i) {
     pointIdxRadiusSearch.clear();
     pointRadiusSquaredDistance.clear();
-    TimeAnalysis kdtree_search_cost;
+    TimeAnalysis kdtree_search_cost(debug_log);
     const int nnn = kdtree.radiusSearch(pcl_input->at(i), radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
     kdtree_search_cost.Stop("kdtree_search_cost");
     assert(nnn > 0); 
@@ -306,8 +307,8 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
     assert(nnn == pointRadiusSquaredDistance.size());
     cov_diag.setZero();
     sum.setZero();
-    TimeAnalysis calc_mevr_cost;
-    TimeAnalysis calc_cov_cost;
+    TimeAnalysis calc_mevr_cost(debug_log);
+    TimeAnalysis calc_cov_cost(debug_log);
     for (const auto idx : pointIdxRadiusSearch) {
       sum += input_points_vector.at(idx);
       cov_diag += input_points_psq_vector.at(idx);
@@ -332,7 +333,7 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   // step 2: detect point: mevr is large enough || nnn is small enough
   assert(pcl_output);
   std::unordered_set<int> selected_indexes;
-  TimeAnalysis mevr_select_cost;
+  TimeAnalysis mevr_select_cost(debug_log);
   if (config->kMevrSelect) {
     const float mevr_th = std::max(config->kMevrThRatio * max_mevr, config->kMevrThLowBound);
     float last_mevr = map_mevr_to_index.begin()->first;
@@ -358,7 +359,7 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   const int mevr_select_num = selected_indexes.size();
   std::cout << "mevr select " << mevr_select_num << std::endl;
   mevr_select_cost.Stop("mevr_select_cost");
-  TimeAnalysis nnn_select_cost;
+  TimeAnalysis nnn_select_cost(debug_log);
   if (config->kNnnSelect) {
     const int nnn_th = config->kNnnThRatio * max_nnn;
     std::cout << "max_nnn = " << max_nnn << ", nnn_th = " << nnn_th << std::endl;
@@ -378,7 +379,7 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   const int nnn_select_num = selected_indexes.size() - mevr_select_num;
   std::cout << "nnn select " << nnn_select_num << std::endl;
   nnn_select_cost.Stop("nnn_select_cost");
-  TimeAnalysis make_output_cost;
+  TimeAnalysis make_output_cost(debug_log);
   assert(pcl_output);
   for (const auto& index : selected_indexes) {
     pcl_output->push_back(pcl_input->at(index));
