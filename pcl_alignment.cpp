@@ -125,7 +125,8 @@ void PclAlignment::DetectKeyPoint(PointCloudT::ConstPtr pcl_input, PointCloudT::
 }
 
 void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT::Ptr pcl_output) {
-  // step 1: prepare: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
+  // step 1: preparation: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
+  // step 1.1: some initialization
   auto config = icp_cov::Config::Instance();
   TimeAnalysis construct_kdtree_cost;
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
@@ -138,32 +139,52 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   std::vector<float> mevr_vec;
   std::vector<int> pointIdxRadiusSearch;
   std::vector<float> pointRadiusSquaredDistance;
-  Eigen::Matrix3d cov;
   int max_nnn = -1;
   float max_mevr = -1.0;
   const float radius = config->kLeafSize * config->kRadiusRatio;
   TimeAnalysis calc_mevr_and_nnn_cost; 
+  // step 1.2: reformat pcl_input to speed up pca
+  TimeAnalysis reformat_pcl_input_cost;
+  std::vector<Eigen::Vector3d> input_points_vector(pcl_size);
+  // ppt: p * p.transpose(); p is input point
+  std::vector<Eigen::Matrix3d> input_points_ppt_vector(pcl_size); 
+  for (int i = 0; i < pcl_size; ++i) {
+    const auto& point = pcl_input->at(i);
+    Eigen::Vector3d& point_eigen = input_points_vector.at(i);
+    point_eigen(0) = point.x;
+    point_eigen(1) = point.y;
+    point_eigen(2) = point.z;
+    input_points_ppt_vector.at(i) = point_eigen * point_eigen.transpose(); 
+  }
+  reformat_pcl_input_cost.Stop("reformat_pcl_input_cost");
+  // step 1.3: calc mevr and nnn 
+  Eigen::Vector3d sum;
+  Eigen::Matrix3d cov;
   for (int i = 0; i < pcl_size; ++i) {
     pointIdxRadiusSearch.clear();
     pointRadiusSquaredDistance.clear();
-    const auto& current_point = pcl_input->at(i);
     TimeAnalysis kdtree_search_cost;
-    const int nnn = kdtree.radiusSearch(current_point, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
+    const int nnn = kdtree.radiusSearch(pcl_input->at(i), radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
     kdtree_search_cost.Stop("kdtree_search_cost");
     assert(nnn > 0); 
     assert(nnn == pointIdxRadiusSearch.size());
     assert(nnn == pointRadiusSquaredDistance.size());
     cov.setZero();
+    sum.setZero();
     TimeAnalysis pca_cost;
-    const Eigen::Vector3d cp(current_point.x, current_point.y, current_point.z);
+    TimeAnalysis calc_cov_cost;
     for (const auto idx : pointIdxRadiusSearch) {
-      const auto& neighbor_point = pcl_input->at(idx);
-      const Eigen::Vector3d np(neighbor_point.x, neighbor_point.y, neighbor_point.z);
-      const Eigen::Vector3d diff = cp - np;
-      cov += diff * diff.transpose();
+      sum += input_points_vector.at(idx);
+      cov += input_points_ppt_vector.at(idx);
     }
+    cov += nnn * input_points_ppt_vector.at(i); 
+    cov -= input_points_vector.at(i) * sum.transpose();
+    cov -= sum * input_points_vector.at(i).transpose();
+    calc_cov_cost.Stop("calc_cov_cost");
+    TimeAnalysis calc_eigen_values_cost;
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver (cov);
     const Eigen::Vector3d eigen_values = solver.eigenvalues();
+    calc_eigen_values_cost.Stop("calc_eigen_values_cost");
     pca_cost.Stop("pca_cost"); 
     assert(eigen_values(1) + eigen_values(2) > 1.0e-6);
     const float mevr = eigen_values(0) / (eigen_values(1) + eigen_values(2));
