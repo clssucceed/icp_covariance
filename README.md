@@ -58,5 +58,6 @@
   * 为什么速度越大,bias和cov会越小    
   * 仿真实验并没有看到正前方性能明显退化的现象
 * 现有参数配置下，各种关心场景的性能如何
+* two stage mevr
 * downsample size自适应
 * downsample size和mevr, nnn size的关系，如果要实时运行，并且保持最优性能，应该选用怎样的参数

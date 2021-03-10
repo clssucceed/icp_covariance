@@ -131,6 +131,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   // step 1: preparation: calc nnn(nearest neighbor number) + mevr(minimum_eigen_value_ratio)
   // step 1.1: some initialization
   auto config = icp_cov::Config::Instance();
+  const auto debug_log = config->kDebugLog;
   TimeAnalysis construct_kdtree_cost;
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
   kdtree.setInputCloud (pcl_input);
@@ -166,7 +167,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   for (int i = 0; i < pcl_size; ++i) {
     pointIdxRadiusSearch.clear();
     pointRadiusSquaredDistance.clear();
-    TimeAnalysis kdtree_search_cost;
+    TimeAnalysis kdtree_search_cost(debug_log);
     const int nnn = kdtree.radiusSearch(pcl_input->at(i), radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
     kdtree_search_cost.Stop("kdtree_search_cost");
     assert(nnn > 0); 
@@ -174,8 +175,8 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
     assert(nnn == pointRadiusSquaredDistance.size());
     cov.setZero();
     sum.setZero();
-    TimeAnalysis pca_cost;
-    TimeAnalysis calc_cov_cost;
+    TimeAnalysis pca_cost(debug_log);
+    TimeAnalysis calc_cov_cost(debug_log);
     for (const auto idx : pointIdxRadiusSearch) {
       sum += input_points_vector.at(idx);
       cov += input_points_ppt_vector.at(idx);
@@ -184,7 +185,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
     cov -= input_points_vector.at(i) * sum.transpose();
     cov -= sum * input_points_vector.at(i).transpose();
     calc_cov_cost.Stop("calc_cov_cost");
-    TimeAnalysis calc_eigen_values_cost;
+    TimeAnalysis calc_eigen_values_cost(debug_log);
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver (cov);
     const Eigen::Vector3d eigen_values = solver.eigenvalues();
     calc_eigen_values_cost.Stop("calc_eigen_values_cost");
