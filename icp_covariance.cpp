@@ -114,10 +114,10 @@ void IcpCovariance::IcpCovFromMonteCarlo() {
               << ", icp_fitness_score: " << pcl_alignment->icp_fitness_score()
               << std::endl;
   }
-  std::cout << "icp_cov_from_monte_carlo: " << std::endl;
-  icp_cov_from_monte_carlo_ = icp_cov::utils::Covariance(yprxyzs);
-  std::cout << "vel_cov_from_monte_carlo: " << std::endl;
-  vel_cov_from_monte_carlo_ = icp_cov::utils::Covariance(velocitys);
+  // std::cout << "icp_cov_from_monte_carlo: " << std::endl;
+  // icp_cov_from_monte_carlo_ = icp_cov::utils::Covariance(yprxyzs);
+  // std::cout << "vel_cov_from_monte_carlo: " << std::endl;
+  // vel_cov_from_monte_carlo_ = icp_cov::utils::Covariance(velocitys);
   std::cout << "vel_norm_cov_from_monte_carlo: " << std::endl;
   vel_norm_cov_from_monte_carlo_ = icp_cov::utils::Covariance(vel_norms);
   std::cout << "vel_direction_cov_from_monte_carlo: " << std::endl;
