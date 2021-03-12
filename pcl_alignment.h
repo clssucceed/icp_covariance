@@ -8,7 +8,7 @@
 
 namespace icp_cov {
 class PclAlignment {
-  using PointT = pcl::PointXYZ;
+  using PointT = pcl::PointNormal;
   using PointCloudT = pcl::PointCloud<PointT>;
   using EigenPoint = Eigen::Vector3d;
   using EigenPointCloud = std::vector<EigenPoint>;

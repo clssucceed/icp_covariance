@@ -8,6 +8,11 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/common/pca.h>
+#include <pcl/registration/registration.h>
+#include <pcl/registration/transformation_estimation_point_to_plane.h>
+#include <pcl/registration/correspondence_estimation_normal_shooting.h>
+#include <pcl/registration/correspondence_rejection_surface_normal.h>
+#include <pcl/features/normal_3d.h>
 
 #include "utils.h"
 #include "time_analysis.h"
@@ -67,25 +72,25 @@ void PclAlignment::Align() {
   assert(pcl1_aligned_);
   switch (config->kPclAlignMode) {
     case 0: {
-      pcl::IterativeClosestPoint<PointT, PointT> icp;
-      icp.setMaximumIterations(kMaxIterations);
-      icp.setInputSource(pcl1_key_points_);
-      icp.setInputTarget(pcl2_key_points_);
-      icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
-      assert(icp.hasConverged());
-      icp_transform_est_ = icp.getFinalTransformation().cast<double>();
-      icp_fitness_score_ = icp.getFitnessScore();
+      pcl::IterativeClosestPoint<PointT, PointT> reg;
+      reg.setMaximumIterations(kMaxIterations);
+      reg.setInputSource(pcl1_key_points_);
+      reg.setInputTarget(pcl2_key_points_);
+      reg.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
+      assert(reg.hasConverged());
+      icp_transform_est_ = reg.getFinalTransformation().cast<double>();
+      icp_fitness_score_ = reg.getFitnessScore();
       break;
     }
     case 1: {
-      pcl::GeneralizedIterativeClosestPoint<PointT, PointT> icp;
-      icp.setMaximumIterations(kMaxIterations);
-      icp.setInputSource(pcl1_key_points_);
-      icp.setInputTarget(pcl2_key_points_);
-      icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
-      assert(icp.hasConverged());
-      icp_transform_est_ = icp.getFinalTransformation().cast<double>();
-      icp_fitness_score_ = icp.getFitnessScore();
+      pcl::GeneralizedIterativeClosestPoint<PointT, PointT> reg;
+      reg.setMaximumIterations(kMaxIterations);
+      reg.setInputSource(pcl1_key_points_);
+      reg.setInputTarget(pcl2_key_points_);
+      reg.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
+      assert(reg.hasConverged());
+      icp_transform_est_ = reg.getFinalTransformation().cast<double>();
+      icp_fitness_score_ = reg.getFitnessScore();
       break;
     }
     case 2: {
@@ -96,6 +101,34 @@ void PclAlignment::Align() {
       reg.setInputSource(pcl1_key_points_);
       reg.setInputTarget(pcl2_key_points_);
       reg.setTransformationEpsilon (1e-8);
+      reg.align (*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
+      assert(reg.hasConverged());
+      icp_transform_est_ = reg.getFinalTransformation().cast<double>();
+      icp_fitness_score_ = reg.getFitnessScore();
+      break;
+    }
+    case 3: {
+      pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> norm_est;
+      norm_est.setSearchMethod (pcl::search::KdTree<pcl::PointNormal>::Ptr (new pcl::search::KdTree<pcl::PointNormal>));
+      norm_est.setKSearch (10);
+      norm_est.setInputCloud (pcl2_key_points_);
+      norm_est.compute (*pcl2_key_points_);
+      pcl::IterativeClosestPoint<PointT, PointT> reg;
+      using PointToPlane = pcl::registration::TransformationEstimationPointToPlane<PointT, PointT>;
+      PointToPlane::Ptr point_to_plane (new PointToPlane);
+      reg.setTransformationEstimation (point_to_plane);
+      reg.setInputSource(pcl1_key_points_);
+      reg.setInputTarget(pcl2_key_points_);
+      reg.setMaximumIterations (kMaxIterations);
+      reg.setTransformationEpsilon (1e-8);
+      // Use a correspondence estimator which needs normals
+      pcl::registration::CorrespondenceEstimationNormalShooting<PointT, PointT, PointT>::Ptr ce (new pcl::registration::CorrespondenceEstimationNormalShooting<PointT, PointT, PointT>);
+      reg.setCorrespondenceEstimation (ce);
+      // Add rejector
+      // pcl::registration::CorrespondenceRejectorSurfaceNormal::Ptr rej (new pcl::registration::CorrespondenceRejectorSurfaceNormal);
+      // rej->setThreshold (0); //Could be a lot of rotation -- just make sure they're at least within 0 degrees
+      // reg.addCorrespondenceRejector (rej);
+      // Register
       reg.align (*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
       assert(reg.hasConverged());
       icp_transform_est_ = reg.getFinalTransformation().cast<double>();
@@ -169,7 +202,7 @@ void PclAlignment::DetectEdgePoint(PointCloudT::ConstPtr pcl_input, PointCloudT:
   auto config = icp_cov::Config::Instance();
   const auto debug_log = config->kDebugLog;
   TimeAnalysis construct_kdtree_cost;
-  pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+  pcl::KdTreeFLANN<PointT> kdtree;
   kdtree.setInputCloud (pcl_input);
   construct_kdtree_cost.Stop("construct_kdtree_cost");
   const int pcl_size = pcl_input->size();
@@ -303,7 +336,7 @@ void PclAlignment::DetectEdgePointApproxMevr(PointCloudT::ConstPtr pcl_input, Po
   auto config = icp_cov::Config::Instance();
   const auto debug_log = config->kDebugLog;
   TimeAnalysis construct_kdtree_cost(debug_log);
-  pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+  pcl::KdTreeFLANN<PointT> kdtree;
   kdtree.setInputCloud (pcl_input);
   construct_kdtree_cost.Stop("construct_kdtree_cost");
   const int pcl_size = pcl_input->size();
@@ -647,20 +680,20 @@ void PclAlignment::Visualization() {
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("pcl_alignment"));
   viewer->setBackgroundColor (0, 0, 0);
 
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl1_downsampled_color(pcl1_downsampled_, 255, 0, 0);
-  viewer->addPointCloud<pcl::PointXYZ> (pcl1_downsampled_, pcl1_downsampled_color, "pcl1_downsampled");
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> pcl1_downsampled_color(pcl1_downsampled_, 255, 0, 0);
+  viewer->addPointCloud<PointT> (pcl1_downsampled_, pcl1_downsampled_color, "pcl1_downsampled");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "pcl1_downsampled");
   
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl2_downsampled_color(pcl2_downsampled_, 0, 255, 0);
-  viewer->addPointCloud<pcl::PointXYZ> (pcl2_downsampled_, pcl2_downsampled_color, "pcl2_downsampled");
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> pcl2_downsampled_color(pcl2_downsampled_, 0, 255, 0);
+  viewer->addPointCloud<PointT> (pcl2_downsampled_, pcl2_downsampled_color, "pcl2_downsampled");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "pcl2_downsampled");
 
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl1_key_points_color(pcl1_key_points_, 255, 0, 255);
-  viewer->addPointCloud<pcl::PointXYZ> (pcl1_key_points_, pcl1_key_points_color, "pcl1_key_points");
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> pcl1_key_points_color(pcl1_key_points_, 255, 0, 255);
+  viewer->addPointCloud<PointT> (pcl1_key_points_, pcl1_key_points_color, "pcl1_key_points");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "pcl1_key_points");
   
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> pcl2_key_points_color(pcl2_key_points_, 0, 255, 255);
-  viewer->addPointCloud<pcl::PointXYZ> (pcl2_key_points_, pcl2_key_points_color, "pcl2_key_points");
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> pcl2_key_points_color(pcl2_key_points_, 0, 255, 255);
+  viewer->addPointCloud<PointT> (pcl2_key_points_, pcl2_key_points_color, "pcl2_key_points");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "pcl2_key_points");
 
   viewer->addCoordinateSystem (1.0, pcl1_pose_.cast<float>());

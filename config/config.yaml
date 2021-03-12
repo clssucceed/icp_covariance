@@ -90,7 +90,7 @@ nnn_th_ratio: 0.6
 all_select_num_up_bound: 200
 
 # pcl align
-pcl_align_mode: 0 # 0: icp, 1: gicp, 2: ndt
+pcl_align_mode: 0 # 0: icp, 1: gicp, 2: ndt, 3. point-to-plane
 
 # others
 delta_time_between_two_frame: 0.1 #unit: sec
