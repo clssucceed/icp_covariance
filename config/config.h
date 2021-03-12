@@ -56,6 +56,8 @@ class Config {
   bool kNnnSelect;
   double kNnnThRatio;
   int kAllSelectNumUpBound;
+  // pcl alignment
+  int kPclAlignMode; // 0: icp, 1: gicp, 2: ndt
   // others
   double kDeltaTimeBetweenTwoFrame;  // unit: sec
   bool kGenerate3d;

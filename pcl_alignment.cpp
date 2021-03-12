@@ -1,6 +1,8 @@
 #include "pcl_alignment.h"
 
 #include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/registration/ndt.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/visualization/pcl_visualizer.h>
@@ -52,6 +54,7 @@ void PclAlignment::PclToEigenPcl(const PointCloudT::Ptr& pcl,
 // TODO(clssucceed@gmail.com): 尝试2d
 // icp(pcl::registration::TransformationEstimation2D)
 void PclAlignment::Align() {
+  auto config = icp_cov::Config::Instance();
   icp_cov::TimeAnalysis all_cost;
   icp_cov::TimeAnalysis downsample_cost;
   Downsample();
@@ -62,15 +65,48 @@ void PclAlignment::Align() {
   icp_cov::TimeAnalysis icp_cost;
   pcl1_aligned_.reset(new PointCloudT);
   assert(pcl1_aligned_);
-  pcl::IterativeClosestPoint<PointT, PointT> icp;
-  icp.setMaximumIterations(kMaxIterations);
-  icp.setInputSource(pcl1_key_points_);
-  icp.setInputTarget(pcl2_key_points_);
-  icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
-  assert(icp.hasConverged());
+  switch (config->kPclAlignMode) {
+    case 0: {
+      pcl::IterativeClosestPoint<PointT, PointT> icp;
+      icp.setMaximumIterations(kMaxIterations);
+      icp.setInputSource(pcl1_key_points_);
+      icp.setInputTarget(pcl2_key_points_);
+      icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
+      assert(icp.hasConverged());
+      icp_transform_est_ = icp.getFinalTransformation().cast<double>();
+      icp_fitness_score_ = icp.getFitnessScore();
+      break;
+    }
+    case 1: {
+      pcl::GeneralizedIterativeClosestPoint<PointT, PointT> icp;
+      icp.setMaximumIterations(kMaxIterations);
+      icp.setInputSource(pcl1_key_points_);
+      icp.setInputTarget(pcl2_key_points_);
+      icp.align(*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
+      assert(icp.hasConverged());
+      icp_transform_est_ = icp.getFinalTransformation().cast<double>();
+      icp_fitness_score_ = icp.getFitnessScore();
+      break;
+    }
+    case 2: {
+      pcl::NormalDistributionsTransform<PointT, PointT> reg;
+      reg.setMaximumIterations (kMaxIterations);
+      reg.setStepSize (0.05);
+      reg.setResolution (config->kLeafSize * 3);
+      reg.setInputSource(pcl1_key_points_);
+      reg.setInputTarget(pcl2_key_points_);
+      reg.setTransformationEpsilon (1e-8);
+      reg.align (*pcl1_aligned_, icp_transform_init_.matrix().cast<float>());
+      assert(reg.hasConverged());
+      icp_transform_est_ = reg.getFinalTransformation().cast<double>();
+      icp_fitness_score_ = reg.getFitnessScore();
+      break;
+    }
+    default: {
+      assert(false);
+    }
+  }
   PclToEigenPcl(pcl1_aligned_, eigen_pcl1_aligned_);
-  icp_transform_est_ = icp.getFinalTransformation().cast<double>();
-  icp_fitness_score_ = icp.getFitnessScore();
   icp_cost.Stop("icp");
   all_cost.Stop("all");
   Visualization();

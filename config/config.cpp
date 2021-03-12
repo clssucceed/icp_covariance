@@ -155,6 +155,10 @@ Config::Config() {
   kAllSelectNumUpBound = yaml_node_["all_select_num_up_bound"].as<int>();
   std::cout << "all_select_num_up_bound: " << kAllSelectNumUpBound << std::endl;
 
+  // pcl align
+  kPclAlignMode = yaml_node_["pcl_align_mode"].as<int>();
+  std::cout << "pcl_align_mode: " << kPclAlignMode << std::endl;
+
   // others
   kDeltaTimeBetweenTwoFrame =
       yaml_node_["delta_time_between_two_frame"].as<double>();
