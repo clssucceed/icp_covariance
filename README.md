@@ -61,4 +61,5 @@
 * i-shape数据生成的小bug
 * downsample size根据距离或者target_size自适应
 * downsample size和mevr, nnn size的关系，如果要实时运行，并且保持最优性能，应该选用怎样的参数
-* two stage mevr
+* two stage mevr: 先通过large_grid整体的pca分析获取两倍或者多倍需求的mevr point，然后再对挑选出来的mevr point进行逐点的pca分析，挑选出mevr最大的那部分作为最终输出
+* 评估2d-icp性能
