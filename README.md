@@ -64,6 +64,13 @@
 * two stage mevr: 先通过large_grid整体的pca分析获取两倍或者多倍需求的mevr point，然后再对挑选出来的mevr point进行逐点的pca分析，挑选出mevr最大的那部分作为最终输出
 * 评估2d-icp性能
 
+# contour detection新方案
+* 设当前点为p, 半径0.25 * min(l, w, h)内的点记为N，这些点的邻域点数最多的点数记为max。如果N < 0.6 * max，则p为border point
+* 半径0.25 * min(l, w, h)内的点计算mevr，保存在map_mevr_to_index中，最后选取mevr最大的那部分点作为edge point，选取的点edge point有一个mevr下限约束
+* 点数少于200就不进行downsample，点数少于100则不进行contour detection
+* downsample size如何自适应: 设期望得到的downsample点的数目为E(目前设置为200)，downsample_size = sqrt((l+w)*h/E)
+* 先挑选edge point，数目上限为0.25E，再挑选border point，数目上限为0.25E
+
 
 # 重要结论
 * 实车配置和仿真实验都证明了初值不好是旋转角速度和速度方向协方差较大的主要原因
